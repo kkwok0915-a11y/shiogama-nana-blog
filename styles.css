@@ -76,6 +76,43 @@ header.site .lede {
   line-height: 1.7;
 }
 
+nav.site-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1.5rem;
+}
+
+nav.site-nav a {
+  display: inline-flex;
+  padding: 0.35rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+nav.site-nav a:hover {
+  color: var(--accent);
+  background: var(--sky-0);
+}
+
+nav.site-nav a.current {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+nav.site-nav a.current:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
 nav.toc {
   background: var(--card);
   border: 1px solid var(--line);
@@ -197,6 +234,56 @@ figure.photo figcaption {
   text-align: center;
 }
 
+article.video {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.35rem 1.25rem 1.5rem;
+  margin-bottom: 1.35rem;
+}
+
+article.video h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.28rem;
+  line-height: 1.4;
+}
+
+.video-desc {
+  margin: 0 0 0.85rem;
+  color: var(--ink-soft);
+}
+
+.video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin: 0.85rem 0 1rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #111827;
+}
+
+.video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.copyright-note {
+  margin: 0;
+  color: var(--ink-mute);
+  font-size: 0.82rem;
+}
+
+p.empty {
+  margin: 0 0 1.5rem;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
 footer.site {
   margin-top: 2rem;
   color: var(--ink-mute);
@@ -213,6 +300,7 @@ footer.site {
 
 @media (min-width: 720px) {
   article.post,
+  article.video,
   nav.toc {
     padding-left: 1.75rem;
     padding-right: 1.75rem;

@@ -18,7 +18,9 @@ PHOTOS_DIR = WATCH / "photos"
 PUBLIC = ROOT / "public"
 STYLES_SRC = ROOT / "styles.css"
 VERCEL_JSON_SRC = ROOT / "vercel.json"
+VIDEOS_SRC = ROOT / "videos.json"
 MANIFEST = ROOT / "deploy-manifest.json"
+DRIVE_ID_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 
 IMG_PLACEHOLDER = re.compile(r"［圖片\s*(\d+)］")
 META_LINE = re.compile(r"^-\s*([^:：]+)\s*[:：]\s*(.*)$")
@@ -178,6 +180,131 @@ def render_body(post: dict) -> str:
     return "\n".join(parts)
 
 
+def site_nav(active: str) -> str:
+    items = (("index", "/", "部落格"), ("videos", "/videos", "中字影片"))
+    links = []
+    for key, href, label in items:
+        cls = ' class="current" aria-current="page"' if key == active else ""
+        links.append(f'      <a href="{href}"{cls}>{label}</a>')
+    return (
+        '    <nav class="site-nav" aria-label="網站選單">\n'
+        + "\n".join(links)
+        + "\n    </nav>"
+    )
+
+
+def load_videos() -> list[dict]:
+    if not VIDEOS_SRC.is_file():
+        print("warning: videos.json missing; videos page will be empty", flush=True)
+        return []
+    raw = json.loads(VIDEOS_SRC.read_text(encoding="utf-8"))
+    if isinstance(raw, dict):
+        items = raw.get("videos", [])
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        items = []
+    videos: list[dict] = []
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            print(f"warning: skipping videos.json entry {i}: not an object", flush=True)
+            continue
+        drive_id = str(item.get("drive_id", "")).strip()
+        if not DRIVE_ID_RE.fullmatch(drive_id):
+            print(
+                f"warning: skipping videos.json entry {i}: invalid drive_id",
+                flush=True,
+            )
+            continue
+        videos.append(
+            {
+                "title_zh": str(item.get("title_zh", "")).strip(),
+                "title_jp": str(item.get("title_jp", "")).strip(),
+                "youtube_url": str(item.get("youtube_url", "")).strip(),
+                "date": str(item.get("date", "")).strip(),
+                "description_zh": str(item.get("description_zh", "")).strip(),
+                "drive_id": drive_id,
+            }
+        )
+    videos.sort(key=date_sort_key, reverse=True)
+    return videos
+
+
+def render_video(video: dict) -> str:
+    title = html.escape(video["title_zh"] or "未命名影片")
+    date = html.escape(video["date"])
+    title_jp = html.escape(video["title_jp"])
+    desc = html.escape(video["description_zh"])
+    drive_id = video["drive_id"]
+    preview = html.escape(
+        f"https://drive.google.com/file/d/{drive_id}/preview", quote=True
+    )
+    meta_bits = []
+    if video["date"]:
+        meta_bits.append(f'<span class="date">{date}</span>')
+    if video["title_jp"]:
+        meta_bits.append(f'<span class="jp">原文：{title_jp}</span>')
+    original = ""
+    if video["youtube_url"]:
+        href = html.escape(video["youtube_url"], quote=True)
+        original = (
+            f'<p><a class="original" href="{href}" '
+            f'target="_blank" rel="noopener noreferrer">觀看原片（YouTube）</a></p>'
+        )
+    description = f'      <p class="video-desc">{desc}</p>\n' if desc else ""
+    return (
+        f'    <article class="video">\n'
+        f"      <h2>{title}</h2>\n"
+        f'      <div class="meta">{"".join(meta_bits)}</div>\n'
+        f"      {original}\n"
+        f"{description}"
+        f'      <div class="video-frame">\n'
+        f'        <iframe src="{preview}" title="{title}" '
+        f'allow="autoplay; encrypted-media" allowfullscreen '
+        f'loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>\n'
+        f"      </div>\n"
+        f'      <p class="copyright-note">影片著作權屬於原頻道。本頁僅提供繁體中文字幕版本供欣賞。</p>\n'
+        f"    </article>"
+    )
+
+
+def render_videos(videos: list[dict]) -> str:
+    generated = datetime.now(ADELAIDE).strftime("%Y-%m-%d %H:%M")
+    if videos:
+        body = "\n".join(render_video(v) for v in videos)
+    else:
+        body = '    <p class="empty">目前還沒有中字影片。</p>'
+    return f"""<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>僕青中字影片</title>
+  <meta name="description" content="僕青（僕が見たかった青空）官方影片的繁體中文字幕翻譯存檔。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body id="top">
+  <div class="wrap">
+    <header class="site">
+      <p class="kicker">僕が見たかった青空</p>
+      <h1>僕青中字影片</h1>
+      <p class="lede">為僕青官方影片加上繁體中文字幕的翻譯存檔。影片著作權屬於原頻道。</p>
+    </header>
+{site_nav("videos")}
+{body}
+    <footer class="site">
+      <p>翻譯存檔，最近更新：{html.escape(generated)}（澳洲阿德萊德時間）</p>
+      <a class="to-top" href="#top">回到最上</a>
+    </footer>
+  </div>
+</body>
+</html>
+"""
+
+
 def render_index(posts: list[dict]) -> str:
     toc_items = []
     articles = []
@@ -223,7 +350,7 @@ def render_index(posts: list[dict]) -> str:
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body id="top">
   <div class="wrap">
@@ -232,6 +359,7 @@ def render_index(posts: list[dict]) -> str:
       <h1>塩釜菜那 部落格 中文翻譯</h1>
       <p class="lede">塩釜菜那官方部落格的繁體中文翻譯，最新文章在最上面。</p>
     </header>
+{site_nav("index")}
     <nav class="toc" aria-label="文章目錄">
       <h2>文章目錄</h2>
       <ol>
@@ -287,7 +415,9 @@ def build() -> list[dict]:
                 flush=True,
             )
 
+    videos = load_videos()
     (PUBLIC / "index.html").write_text(render_index(posts), encoding="utf-8")
+    (PUBLIC / "videos.html").write_text(render_videos(videos), encoding="utf-8")
 
     files = []
     for path in sorted(PUBLIC.rglob("*")):
@@ -318,11 +448,19 @@ def build() -> list[dict]:
         encoding="utf-8",
     )
 
-    print(f"built {len(posts)} posts, {copied} photos, {len(files)} files -> {PUBLIC}")
+    print(
+        f"built {len(posts)} posts, {len(videos)} videos, {copied} photos, "
+        f"{len(files)} files -> {PUBLIC}"
+    )
     for post in posts:
         print(
             f"  {post['date']}  {post['id']}  {post['title_zh']}  "
             f"({len(post['photos'])} photos)",
+            flush=True,
+        )
+    for video in videos:
+        print(
+            f"  video  {video['date']}  {video['title_zh']}",
             flush=True,
         )
     return posts
