@@ -10,7 +10,7 @@
     "typecheck": "tsc -b",
     "build": "node scripts/gen-posts.mjs && tsc -b && vite build",
     "preview": "vite preview --port 4174 --strictPort",
-    "manifest": "node scripts/manifest.mjs",
+    "manifest": "cp scripts/static-vercel.json dist/vercel.json && node scripts/manifest.mjs",
     "test:smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {

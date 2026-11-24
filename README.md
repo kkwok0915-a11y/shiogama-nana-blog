@@ -31,6 +31,9 @@ Sources: `/workspace/blog-watch/translations/<id>.md` and `/workspace/blog-watch
 
 ## Supabase
 
+Project `shiogama-nana-blog` (ref `jqsyymshdlrghyqtbcmp`, ap-southeast-2, free plan), API `https://jqsyymshdlrghyqtbcmp.supabase.co`.
+Separate from the `bokuao-videos` project.
+
 Table `public.blog_posts`: `id text pk`, `title_zh`, `title_jp`, `post_date date`, `original_url text unique`,
 `body jsonb` (ordered blocks `{type:'text',text}` / `{type:'photo',src,alt,width,height}`), `photo_count int`,
 `added_at timestamptz default now()`, `published bool default true`.
@@ -48,14 +51,14 @@ npm run add-post -- <id>        # photos -> public/photos/<id>/, regenerates pos
 ```
 
 1. Run the SQL printed between `-----BEGIN SQL-----` / `-----END SQL-----` (also saved at `supabase/upserts/<id>.sql`)
-   with the Supabase connector `execute_sql` on the blog project. It is an idempotent upsert on `id`.
+   with the Supabase connector `execute_sql` on project `jqsyymshdlrghyqtbcmp` (never the bokuao-videos project). It is an idempotent upsert on `id`.
 2. Text-only post: done (the site reads Supabase at runtime). Post with photos: redeploy (below) so the images exist.
 3. `git add -A && git commit -m "Add post <id>" && git push`.
 
 ## Deploy (user-Vercel MCP; no CLI token)
 
 ```bash
-npm run build && npm run manifest   # dist/ + deploy-manifest.json + upload-payloads/*.b64
+npm run build && npm run manifest   # dist/ (+ static vercel.json for headers) + deploy-manifest.json + upload-payloads/*.b64
 ```
 
 For each manifest file: `upload_file` (`teamId`, `contentLength`=size, `xVercelDigest`=sha, `requestBody`=`$file:<b64>`),
