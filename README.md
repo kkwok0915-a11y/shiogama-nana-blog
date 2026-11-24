@@ -3,9 +3,10 @@
 Static archive of Traditional Chinese translations of 塩釜菜那's Bokuao blog.
 
 Production URL: https://shiogama-nana-blog.vercel.app
-Videos page: https://shiogama-nana-blog.vercel.app/videos
 Vercel project: `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`) on team `team_MpzOmojkBvxnWwiQW63WOOQH`.
 Use the `*.vercel.app` project domain above; the `*-kkwok0915-a11ys-projects.vercel.app` alias is SSO-protected.
+
+Subtitled videos for all Bokuao members are on a separate site: https://bokuao-videos.vercel.app
 
 ## Rebuild and deploy
 
@@ -17,7 +18,6 @@ Use the `*.vercel.app` project domain above; the `*-kkwok0915-a11ys-projects.ver
 
 - Translations: `/workspace/blog-watch/translations/<id>.md`
 - Photos: `/workspace/blog-watch/photos/<id>/N.jpg` (also accepts `shiogama-nana-<id>-N.jpg` in `/workspace/blog-watch/`)
-- Videos: `/workspace/blog-site/videos.json` (rebuild always writes `public/videos.html`, even if the list is empty)
 
 If the Vercel CLI is installed and authenticated (`VERCEL_TOKEN` or `vercel whoami`), it deploys `public/` to production on the **shiogama-nana-blog** project (`--scope team_MpzOmojkBvxnWwiQW63WOOQH`).
 
@@ -29,24 +29,3 @@ If the CLI is not available, the script still builds the site and writes `deploy
 4. If the production URL is gated, call `update_project` on this project only with `requestBody.ssoProtection=null`.
 
 Team access: the Hobby account's team is `kkwok0915-a11ys-projects` (`team_MpzOmojkBvxnWwiQW63WOOQH`). If MCP returns 403 for that scope, call `authorize_team_access` with that `teamId` and have the user open the consent link. Do not scrape credentials.
-
-## Adding a subtitled video
-
-1. Upload the subtitled file to the archive Google Drive account (not a personal account). Keep download disabled for viewers when the file is shared.
-2. Add one object to the `videos` array in `videos.json`:
-
-```json
-{
-  "title_zh": "【中字】繁體中文標題",
-  "title_jp": "原片日文標題",
-  "youtube_url": "https://www.youtube.com/watch?v=VIDEO_ID",
-  "date": "YYYY.MM.DD",
-  "description_zh": "簡短中文說明。",
-  "drive_id": "GOOGLE_DRIVE_FILE_ID"
-}
-```
-
-Use the original video's publish date in `YYYY.MM.DD` form. `drive_id` is only the file id from the Drive URL (`https://drive.google.com/file/d/<id>/...`), never an email or account name.
-3. Rebuild and deploy with `/workspace/blog-site/deploy.sh` (or `python3 /workspace/blog-site/build.py` followed by the Vercel MCP upload steps below). The nightly blog rebuild keeps the videos page automatically as long as `videos.json` stays in this repo.
-
-Do not put personal names, email addresses, or Google account details in `videos.json`, the generated pages, or git commits.
