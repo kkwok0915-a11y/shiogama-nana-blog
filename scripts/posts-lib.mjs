@@ -125,7 +125,7 @@ export function writeFallback(rows) {
     .map((r) => ({ ...r, added_at: prev[r.id]?.added_at ?? now }))
     .sort((a, b) => (b.post_date ?? "").localeCompare(a.post_date ?? "") || b.id.localeCompare(a.id));
   mkdirSync(join(ROOT, "src", "data"), { recursive: true });
-  writeFileSync(FALLBACK, JSON.stringify({ generated_at: now, posts }, null, 2) + "\n");
+  writeFileSync(FALLBACK, JSON.stringify({ posts }, null, 2) + "\n");
   return posts;
 }
 
