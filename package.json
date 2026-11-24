@@ -1,0 +1,29 @@
+{
+  "name": "shiogama-nana-blog",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "gen-posts": "node scripts/gen-posts.mjs",
+    "add-post": "node scripts/add-post.mjs",
+    "typecheck": "tsc -b",
+    "build": "node scripts/gen-posts.mjs && tsc -b && vite build",
+    "preview": "vite preview --port 4174 --strictPort",
+    "manifest": "node scripts/manifest.mjs",
+    "test:smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.7",
+    "@types/react": "^19.3.1",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

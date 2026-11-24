@@ -1,3 +1,11 @@
+node_modules/
+dist/
 upload-payloads/
 deploy-manifest.json
+*.tsbuildinfo
 __pycache__/
+.env
+.env.*
+*.local
+supabase/.secret*
+supabase/upserts/
