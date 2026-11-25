@@ -2,7 +2,7 @@ import Photo from "./Photo";
 import { isNew, postPath } from "../lib/posts";
 import type { Post } from "../types";
 
-export default function PostCard({ post, onOpen, read }: { post: Post; onOpen: (p: Post) => void; read: boolean }) {
+export default function PostCard({ post, onOpen, read, priority }: { post: Post; onOpen: (p: Post) => void; read: boolean; priority?: boolean }) {
   return (
     <li className={"card" + (read ? " read" : "")}>
       <a
@@ -22,6 +22,7 @@ export default function PostCard({ post, onOpen, read }: { post: Post; onOpen: (
               width={post.cover.width ?? undefined}
               height={post.cover.height ?? undefined}
               size="sm"
+              priority={priority}
             />
           ) : (
             <span className="thumb-fallback" aria-hidden="true">菜那</span>

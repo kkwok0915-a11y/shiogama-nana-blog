@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BackToTop from "./components/BackToTop";
+import ListSkeleton from "./components/ListSkeleton";
 import MonthNav from "./components/MonthNav";
 import PhotoGallery from "./components/PhotoGallery";
 import PostCard from "./components/PostCard";
@@ -7,7 +8,7 @@ import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
 import StatusPage from "./components/StatusPage";
 import { usePosts } from "./hooks";
-import { filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
+import { bundledPosts, filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
 import { useRead } from "./lib/read";
 import type { Post } from "./types";
 import UpgradeNotice from "./components/UpgradeNotice";
@@ -119,12 +120,8 @@ export default function App() {
           <p className="lede">塩釜菜那官方部落格「菜那のもぜか日記」的繁體中文翻譯，最新文章在最上面。</p>
         </header>
 
-        <main id="main">
-        {state.status === "loading" && (
-          <p className="status" role="status">
-            <span className="spinner" aria-hidden="true" /> 載入文章中…
-          </p>
-        )}
+        <main id="main" aria-busy={state.status === "loading"}>
+        {state.status === "loading" && <ListSkeleton count={bundledPosts().length} />}
         {state.status === "error" && (
           <StatusPage
             title="無法載入文章"
@@ -210,7 +207,7 @@ export default function App() {
                         </h2>
                         <ul className="list">
                           {m.items.map((p) => (
-                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} />
+                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} priority={visible.indexOf(p) < 3} />
                           ))}
                         </ul>
                       </section>
@@ -234,7 +231,7 @@ export default function App() {
 
         <footer className="site">
           <p>非官方翻譯存檔。原文與照片著作權屬於原作者及營運單位。</p>
-          {latest && <p>最新文章：{latest}</p>}
+          <p className="footer-meta">{latest ? `最新文章：${latest}` : " "}</p>
         </footer>
       </div>
       <BackToTop />

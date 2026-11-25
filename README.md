@@ -13,6 +13,7 @@ Vite + React + TypeScript, system fonts only. No advertising or cookie trackers;
 - The 回到頂部 button sits above the iOS Safari bottom toolbar (`safe-area-inset-bottom + 80px`) so the first tap on iPhone activates it.
 - An unknown `?p=` id shows a Traditional Chinese not-found page with a button back to the list. If `/api` and the bundled fallback both fail, a retry button is shown. A React error boundary turns a crash into a friendly refresh page instead of a blank screen.
 - The page is marked `lang="zh-Hant"`, has a skip link and a `main` landmark, visible focus rings, and respects `prefers-reduced-motion`. Icon buttons have accessible names, photos have alt text, and colour contrast meets WCAG AA. Esc closes the photo viewer and restores focus.
+- Cards reserve a 3:4 thumbnail box and a two-line title height so the list does not jump while photos or `/api/posts` load. A matching skeleton is shown only if the bundled list is empty.
 - Post photos ship as resized WebP (`N-sm.webp` for cards and the gallery, `N.webp` for the post body) with the original JPEG as a fallback. Images are lazy-loaded. `@vercel/analytics` is included (cookie-free); enable Web Analytics in the Vercel dashboard (Hobby tier, no cost).
 
 ## Layout
@@ -20,10 +21,10 @@ Vite + React + TypeScript, system fonts only. No advertising or cookie trackers;
 ```
 src/data/posts.json          bundled fallback (generated; committed)
 src/lib/posts.ts             data layer: fetchPosts() -> GET /api/posts, fallback posts.json on error/4s timeout
-src/hooks.ts                 usePosts()
+src/hooks.ts                 usePosts() paints the bundled list first, then refreshes from /api
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
 src/App.tsx                  list / post / gallery switch, search, month archive, ?p=<id> links
-src/components/              PostCard, PostView, Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop, ErrorBoundary, StatusPage, Photo
+src/components/              PostCard, PostView, Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop, ErrorBoundary, StatusPage, Photo, ListSkeleton
 public/photos/<id>/N.jpg     original photos (static; body photo blocks point here)
 public/photos/<id>/N.webp    resized WebP (and `N-sm.webp`) generated at build time
 scripts/optimize-photos.py   Pillow WebP resize (runs from gen-posts / add-post / build)

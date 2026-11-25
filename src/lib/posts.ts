@@ -89,6 +89,15 @@ export async function fetchPosts(): Promise<FetchResult> {
   }
 }
 
+/** Bundled list for first paint and skeleton sizing. Does not hit the network. */
+export function bundledPosts(): Post[] {
+  try {
+    return toPosts(jsonRows());
+  } catch {
+    return [];
+  }
+}
+
 export function filterPosts(list: Post[], query: string): Post[] {
   const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return terms.length ? list.filter((p) => terms.every((t) => p.searchText.includes(t))) : list;

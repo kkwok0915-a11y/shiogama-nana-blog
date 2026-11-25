@@ -43,6 +43,14 @@ ok(dates.every((d, i) => i === 0 || dates[i - 1] >= d), `newest first (${dates.j
 ok((await page.locator(".card .thumb img").count()) === n, "every card has a thumbnail");
 ok((await page.locator('.card .thumb source[type="image/webp"]').count()) === n, "every card has a webp source");
 ok((await page.locator(".card-excerpt").count()) === n, "every card has an excerpt");
+
+const thumbRatio = await page.$eval(".thumb", (el) => getComputedStyle(el).aspectRatio);
+ok(/^3\s*\/\s*4$/.test(thumbRatio), `post thumb aspect-ratio (${thumbRatio})`);
+const thumbImg = await page.$eval(".thumb img", (el) => ({ w: el.getAttribute("width"), h: el.getAttribute("height") }));
+ok(thumbImg.w && thumbImg.h, `thumb has width/height (${thumbImg.w}x${thumbImg.h})`);
+ok((await page.locator(".footer-meta").count()) === 1, "footer reserves the date line");
+ok((await page.locator(".list-skeleton").count()) === 0, "skeleton is gone after the list is ready");
+
 const html = await page.content();
 ok(!/kwok|kkwok|@gmail|a11ys|stephen|スティーブン/i.test(html), "no personal info in page HTML");
 ok((await page.locator("header.site .kicker").textContent())?.trim() === "僕が見たかった青空", "header kicker is the group name");
