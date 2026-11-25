@@ -1,13 +1,16 @@
 // Regenerate public/photos/<id>/N.jpg and src/data/posts.json from every translation .md.
 // Writes supabase/seed.sql (full upsert). If the translations folder is missing
 // (e.g. a fresh clone elsewhere), keeps the committed posts.json and exits 0.
+import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ROOT, TRANSLATIONS, allIds, copyPhotos, parsePost, upsertSql, writeFallback } from "./posts-lib.mjs";
 
 const ids = allIds();
 if (!ids.length) {
   console.log(`gen-posts: no posts in ${TRANSLATIONS}; keeping committed src/data/posts.json`);
+  optimizePhotos();
   process.exit(0);
 }
 const rows = [];
@@ -21,3 +24,10 @@ const posts = writeFallback(rows);
 writeFileSync(join(ROOT, "supabase", "seed.sql"), upsertSql(posts));
 console.log(`gen-posts: ${posts.length} posts -> src/data/posts.json, supabase/seed.sql`);
 for (const p of posts) console.log(`  ${p.post_date}  ${p.id}  ${p.title_zh}  (${p.photo_count} photos)`);
+
+function optimizePhotos() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const r = spawnSync("python3", [join(here, "optimize-photos.py")], { stdio: "inherit" });
+  if (r.status) process.exit(r.status ?? 1);
+}
+optimizePhotos();

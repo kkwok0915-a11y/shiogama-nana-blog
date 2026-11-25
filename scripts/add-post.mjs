@@ -4,8 +4,10 @@
 // 3. regenerates the bundled fallback src/data/posts.json (all posts)
 // 4. writes supabase/upserts/<id>.sql and prints it between markers, for the
 //    Supabase connector's execute_sql on project shiogama-nana-blog.
+import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { ROOT, allIds, copyPhotos, parsePost, upsertSql, writeFallback } from "./posts-lib.mjs";
 
 const id = process.argv[2];
@@ -29,3 +31,6 @@ console.log(target.row.photo_count ? "NEW PHOTOS: redeploy needed for images to 
 console.log("-----BEGIN SQL-----");
 process.stdout.write(sql);
 console.log("-----END SQL-----");
+
+const here = dirname(fileURLToPath(import.meta.url));
+spawnSync("python3", [join(here, "optimize-photos.py")], { stdio: "inherit" });

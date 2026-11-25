@@ -4,11 +4,11 @@
   --sky-2: #c5d8ee;
   --ink: #1c2838;
   --ink-soft: #4a5a6e;
-  --ink-mute: #6b7c90;
+  --ink-mute: #4e5d70;
   --card: #ffffff;
-  --accent: #2f6fad;
-  --accent-hover: #1e558c;
-  --line: rgba(47, 111, 173, 0.16);
+  --accent: #1e558c;
+  --accent-hover: #163f68;
+  --line: rgba(30, 85, 140, 0.16);
   --shadow: 0 6px 20px rgba(28, 58, 92, 0.08);
   --shadow-hover: 0 14px 32px rgba(28, 58, 92, 0.16);
   --radius: 16px;
@@ -134,7 +134,7 @@ header.site .lede { margin: 0.5rem auto 0; max-width: 36rem; color: var(--ink-so
 .badge-new, .badge-count {
   position: absolute; font-size: 0.7rem; font-weight: 700; border-radius: 999px; padding: 0.1rem 0.5rem;
 }
-.badge-new { top: 0.5rem; left: 0.5rem; background: #e8505b; color: #fff; letter-spacing: 0.06em; }
+.badge-new { top: 0.5rem; left: 0.5rem; background: #b91c1c; color: #fff; letter-spacing: 0.06em; }
 .badge-read {
   position: absolute; top: 0.5rem; right: 0.5rem;
   background: rgba(28, 40, 56, 0.72); color: #fff;
@@ -271,7 +271,64 @@ footer.site p { margin: 0.2rem 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+
+/* Skip link and a global visible focus ring (WCAG 2.4.7). */
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 200;
+  padding: 0.45rem 0.85rem;
+  background: var(--card);
+  color: var(--accent);
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  box-shadow: var(--shadow);
+  transform: translateY(-160%);
+}
+.skip-link:focus, .skip-link:focus-visible {
+  transform: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.status-page {
+  text-align: center;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 3rem 1rem 4rem;
+}
+.status-page h1, .status-page h2 { margin: 0 0 0.6rem; font-size: 1.4rem; }
+.status-page p { margin: 0 0 1.25rem; color: var(--ink-soft); }
+.status-action, .status-retry {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+  color: var(--accent);
+  background: #fff;
+  border: 1px solid var(--accent);
+}
+.status-action {
+  min-height: 44px;
+  padding: 0.45rem 1.2rem;
+}
+.status-action:hover, .status-retry:hover { background: var(--sky-1); }
+.status-retry {
+  margin-left: 0.35rem;
+  padding: 0.15rem 0.75rem;
+  min-height: 36px;
 }
 
 /* Dismissible upgrade banner (controlled by SHOW_UPGRADE_NOTICE). */

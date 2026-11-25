@@ -1,3 +1,4 @@
+import Photo from "./Photo";
 import { isNew, postPath } from "../lib/posts";
 import type { Post } from "../types";
 
@@ -15,13 +16,12 @@ export default function PostCard({ post, onOpen, read }: { post: Post; onOpen: (
       >
         <span className="thumb">
           {post.cover ? (
-            <img
+            <Photo
               src={post.cover.src}
               alt=""
-              loading="lazy"
-              decoding="async"
               width={post.cover.width ?? undefined}
               height={post.cover.height ?? undefined}
+              size="sm"
             />
           ) : (
             <span className="thumb-fallback" aria-hidden="true">菜那</span>

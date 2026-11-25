@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { groupByMonth } from "../lib/posts";
 import type { PhotoBlock, Post } from "../types";
 import Lightbox from "./Lightbox";
+import Photo from "./Photo";
 import MonthNav from "./MonthNav";
 
 interface Item {
@@ -53,13 +54,12 @@ export default function PhotoGallery({ posts, onOpenPost }: Props) {
                     onClick={() => setLb(idx)}
                     aria-label={`${it.post.dateLabel} ${it.post.title_zh} 的照片`}
                   >
-                    <img
+                    <Photo
                       src={it.photo.src}
                       alt={it.photo.alt ?? ""}
-                      loading="lazy"
-                      decoding="async"
                       width={it.photo.width ?? undefined}
                       height={it.photo.height ?? undefined}
+                      size="sm"
                     />
                   </button>
                 </li>

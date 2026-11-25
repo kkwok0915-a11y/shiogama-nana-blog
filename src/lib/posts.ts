@@ -79,7 +79,13 @@ export async function fetchPosts(): Promise<FetchResult> {
     throw new Error("empty");
   } catch (err) {
     console.warn("API fetch failed; using bundled posts.json", err);
-    return { posts: toPosts(jsonRows()), source: "json", warning: "資料庫暫時無法連線，以下為備份內容。" };
+    try {
+      const posts = toPosts(jsonRows());
+      if (!posts.length) throw new Error("empty fallback");
+      return { posts, source: "json", warning: "資料庫暫時無法連線，以下為備份內容。" };
+    } catch {
+      throw err instanceof Error ? err : new Error("unavailable");
+    }
   }
 }
 

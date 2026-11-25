@@ -1,7 +1,7 @@
 # 塩釜菜那 部落格 中文翻譯
 
 Archive of Traditional Chinese translations of 塩釜菜那's Bokuao blog.
-Vite + React + TypeScript, no trackers, system fonts only.
+Vite + React + TypeScript, system fonts only. No advertising or cookie trackers; optional cookie-free Vercel Web Analytics once enabled in the dashboard.
 
 - Production: https://shiogama-nana-blog.vercel.app (use this `*.vercel.app` domain; team-scoped aliases are SSO-protected)
 - Vercel project `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`), team `team_MpzOmojkBvxnWwiQW63WOOQH`
@@ -10,6 +10,9 @@ Vite + React + TypeScript, no trackers, system fonts only.
 - The list has a search box (title, translated body, and Japanese title; with a clear button), a month jump list (`2026年11月 (n)`), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
 - The post view keeps a「閱讀官方原文」link to the official Japanese post.
 - Share links (`/?p=<id>`) and the site root include Open Graph / Twitter meta tags (title, Traditional Chinese excerpt, first photo). A server function injects the tags into `index.html` because crawlers do not run JavaScript.
+- An unknown `?p=` id shows a Traditional Chinese not-found page with a button back to the list. If `/api` and the bundled fallback both fail, a retry button is shown. A React error boundary turns a crash into a friendly refresh page instead of a blank screen.
+- The page is marked `lang="zh-Hant"`, has a skip link and a `main` landmark, visible focus rings, and respects `prefers-reduced-motion`. Icon buttons have accessible names, photos have alt text, and colour contrast meets WCAG AA. Esc closes the photo viewer and restores focus.
+- Post photos ship as resized WebP (`N-sm.webp` for cards and the gallery, `N.webp` for the post body) with the original JPEG as a fallback. Images are lazy-loaded. `@vercel/analytics` is included (cookie-free); enable Web Analytics in the Vercel dashboard (Hobby tier, no cost).
 
 ## Layout
 
@@ -19,8 +22,10 @@ src/lib/posts.ts             data layer: fetchPosts() -> GET /api/posts, fallbac
 src/hooks.ts                 usePosts()
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
 src/App.tsx                  list / post / gallery switch, search, month archive, ?p=<id> links
-src/components/              PostCard, PostView, Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop
-public/photos/<id>/N.jpg     photos (static; body photo blocks point here)
+src/components/              PostCard, PostView, Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop, ErrorBoundary, StatusPage, Photo
+public/photos/<id>/N.jpg     original photos (static; body photo blocks point here)
+public/photos/<id>/N.webp    resized WebP (and `N-sm.webp`) generated at build time
+scripts/optimize-photos.py   Pillow WebP resize (runs from gen-posts / add-post / build)
 public/manifest.webmanifest  PWA manifest (standalone; no service worker)
 public/icon-*.png            192, 512, maskable, and apple-touch-icon
 scripts/posts-lib.mjs        md parser, photo copy, image size, fallback writer, upsert SQL builder

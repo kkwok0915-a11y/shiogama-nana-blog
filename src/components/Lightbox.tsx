@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import Photo from "./Photo";
+import { useDialogFocus } from "../lib/modalFocus";
 import type { PhotoBlock } from "../types";
 
 interface Props {
@@ -17,6 +19,8 @@ export default function Lightbox({ photos, index, onIndex, action }: Props) {
   photosRef.current = photos;
   onIndexRef.current = onIndex;
   const open = index !== null && photos[index] !== undefined;
+
+  useDialogFocus(open, ref);
 
   useEffect(() => {
     const d = ref.current;
@@ -88,7 +92,7 @@ export default function Lightbox({ photos, index, onIndex, action }: Props) {
     >
       {p && (
         <>
-          <img src={p.src} alt={p.alt ?? ""} />
+          <Photo src={p.src} alt={p.alt ?? ""} width={p.width ?? undefined} height={p.height ?? undefined} size="full" />
           <div className="lb-bar">
             <button type="button" className="lb-btn" onClick={() => onIndex(index! - 1)} disabled={index === 0} aria-label="上一張">
               ‹

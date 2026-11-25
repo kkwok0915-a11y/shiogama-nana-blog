@@ -5,6 +5,7 @@ import PhotoGallery from "./components/PhotoGallery";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
+import StatusPage from "./components/StatusPage";
 import { usePosts } from "./hooks";
 import { filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
 import { useRead } from "./lib/read";
@@ -31,8 +32,12 @@ export default function App() {
   const active = idx >= 0 ? posts[idx] : null;
 
   useEffect(() => {
-    document.title = active ? `${active.title_zh}｜${TITLE}` : TITLE;
-  }, [active]);
+    document.title = active
+      ? `${active.title_zh}｜${TITLE}`
+      : state.status === "ready" && activeId
+        ? `找不到這篇文章｜${TITLE}`
+        : TITLE;
+  }, [active, activeId, state.status]);
 
   useEffect(() => {
     if (state.status !== "ready") return;
@@ -94,6 +99,9 @@ export default function App() {
   return (
     <>
       <UpgradeNotice />
+      <a className="skip-link" href="#main">
+        跳到主要內容
+      </a>
       <div className="wrap" id="top">
         <header className="site">
           <p className="kicker">僕が見たかった青空</p>
@@ -111,27 +119,39 @@ export default function App() {
           <p className="lede">塩釜菜那官方部落格「菜那のもぜか日記」的繁體中文翻譯，最新文章在最上面。</p>
         </header>
 
+        <main id="main">
         {state.status === "loading" && (
           <p className="status" role="status">
             <span className="spinner" aria-hidden="true" /> 載入文章中…
           </p>
         )}
         {state.status === "error" && (
-          <p className="status error" role="alert">
-            無法載入文章，請稍後再試。
-          </p>
+          <StatusPage
+            title="無法載入文章"
+            message="請檢查網路連線後再試一次。"
+            actionLabel="再試一次"
+            onAction={state.retry}
+            alert
+          />
         )}
 
         {state.status === "ready" && (
           <>
-            {state.warning && <p className="status warn">{state.warning}</p>}
-            {activeId && !active && (
-              <p className="status">
-                找不到這篇文章。{" "}
-                <button type="button" className="pill" onClick={back}>
-                  返回文章列表
+            {state.warning && (
+              <p className="status warn" role="status">
+                {state.warning}{" "}
+                <button type="button" className="status-retry" onClick={state.retry}>
+                  再試一次
                 </button>
               </p>
+            )}
+            {activeId && !active && (
+              <StatusPage
+                title="找不到這篇文章"
+                message="這個連結沒有對應的文章，可能已經下架或網址有誤。"
+                actionLabel="返回文章列表"
+                onAction={back}
+              />
             )}
             {active ? (
               <PostView
@@ -210,6 +230,7 @@ export default function App() {
             )}
           </>
         )}
+        </main>
 
         <footer className="site">
           <p>非官方翻譯存檔。原文與照片著作權屬於原作者及營運單位。</p>

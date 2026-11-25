@@ -41,10 +41,14 @@ const titles = () => page.$$eval(".card-title", (els) => els.map((e) => e.textCo
 const dates = await page.$$eval(".card-date", (els) => els.map((e) => e.textContent));
 ok(dates.every((d, i) => i === 0 || dates[i - 1] >= d), `newest first (${dates.join(", ")})`);
 ok((await page.locator(".card .thumb img").count()) === n, "every card has a thumbnail");
+ok((await page.locator('.card .thumb source[type="image/webp"]').count()) === n, "every card has a webp source");
 ok((await page.locator(".card-excerpt").count()) === n, "every card has an excerpt");
 const html = await page.content();
 ok(!/kwok|kkwok|@gmail|a11ys|stephen|スティーブン/i.test(html), "no personal info in page HTML");
 ok((await page.locator("header.site .kicker").textContent())?.trim() === "僕が見たかった青空", "header kicker is the group name");
+ok((await page.locator("html").getAttribute("lang")) === "zh-Hant", "html lang is zh-Hant");
+ok((await page.locator("main#main").count()) === 1, "main landmark present");
+ok((await page.locator("a.skip-link").count()) === 1, "skip link present");
 
 const postsApi = await page.request.get(new URL("/api/posts", base).href);
 ok(postsApi.ok(), `/api/posts HTTP ${postsApi.status()}`);
@@ -198,7 +202,7 @@ if (shots) {
 await d.close();
 
 const legacy = await context.newPage();
-await legacy.goto(base + "#p=21623", { waitUntil: "networkidle" });
+await legacy.goto(base + "#p=21623", { waitUntil: "load" });
 await legacy.waitForSelector("article.post");
 ok(new URL(legacy.url()).searchParams.get("p") === "21623", "legacy #p= is canonicalised to ?p=");
 await legacy.close();
@@ -249,6 +253,21 @@ await m.evaluate(() => window.scrollTo(0, 1200));
 await m.waitForSelector(".to-top.visible");
 ok(true, "mobile: back-to-top appears after scrolling");
 if (shots) await m.waitForTimeout(400), await m.screenshot({ path: `${shots}/mobile-back-to-top.png` });
+
+// Unknown ?p= shows a not-found state; Esc closes the photo viewer when one is open.
+const nf = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+await nf.goto(base + "?p=0", { waitUntil: "networkidle" });
+await nf.waitForSelector(".status-page");
+ok((await nf.locator(".status-page h2").textContent())?.includes("找不到這篇文章"), "unknown ?p= shows not-found title");
+ok((await nf.locator(".status-page button").textContent())?.includes("返回文章列表"), "not-found has back-to-list button");
+if (shots) {
+  mkdirSync(shots, { recursive: true });
+  await nf.screenshot({ path: `${shots}/not-found.png`, fullPage: true });
+}
+await nf.click(".status-page button");
+await nf.waitForSelector(".card");
+ok(!new URL(nf.url()).searchParams.get("p"), "not-found back button returns to the list");
+await nf.close();
 
 ok(errors.length === 0, `no page errors ${errors.join("; ")}`);
 ok(bad.length === 0, `no failed requests ${bad.join("; ")}`);
