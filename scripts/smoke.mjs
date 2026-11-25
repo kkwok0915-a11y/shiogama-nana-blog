@@ -44,14 +44,7 @@ ok((await page.locator(".card .thumb img").count()) === n, "every card has a thu
 ok((await page.locator(".card-excerpt").count()) === n, "every card has an excerpt");
 const html = await page.content();
 ok(!/kwok|kkwok|@gmail|a11ys|stephen|スティーブン/i.test(html), "no personal info in page HTML");
-const logo = page.locator("header.site .group-logo");
-ok((await logo.count()) === 1, "official group logo in the header");
-ok((await logo.getAttribute("alt")) === "僕が見たかった青空", "logo alt text is the group name");
-ok((await page.locator("header.site .kicker").getAttribute("aria-label")) === "僕が見たかった青空", "logo aria-label is the group name");
-{
-  const lr = await page.request.get(new URL("/logo.svg", base).href);
-  ok(lr.ok() && (lr.headers()["content-type"] || "").includes("svg"), `logo.svg HTTP ${lr.status()} ${lr.headers()["content-type"]}`);
-}
+ok((await page.locator("header.site .kicker").textContent())?.trim() === "僕が見たかった青空", "header kicker is the group name");
 if (shots) {
   const box = await page.locator("header.site").boundingBox();
   if (box) await page.screenshot({ path: `${shots}/desktop-header.png`, clip: { x: 0, y: 0, width: 1280, height: Math.min(900, Math.ceil(box.y + box.height + 24)) } });
@@ -62,8 +55,7 @@ console.log(`info  data source warning shown: ${warn ? "yes (fallback)" : "no"}`
 ok((await page.locator(".badge-new").count()) === n, `NEW badge on posts added in last 7 days (${n})`);
 ok((await page.locator(".badge-new").first().textContent())?.trim() === "NEW", "badge text is NEW");
 ok((await page.locator(".badge-read").count()) === 0, "no 已讀 markers before opening a post");
-ok((await page.locator(".filter-unread").count()) === 1, "未讀 filter chip is present");
-await minTap(page.locator(".filter-unread"), "未讀 chip");
+ok((await page.locator(".filter-unread").count()) === 0, "未讀 filter chip is not present");
 await minTap(page.locator(".search input"), "search input");
 
 // PWA manifest + icons + no service worker.
@@ -165,13 +157,6 @@ ok(!new URL(page.url()).searchParams.has("p"), "返回文章列表 returns to th
 ok((await page.locator(".badge-read").count()) >= 2, `已讀 markers after opening posts (${await page.locator(".badge-read").count()})`);
 if (shots) await page.screenshot({ path: `${shots}/desktop-new-and-read.png`, fullPage: true });
 
-// 未讀 filter hides posts already opened.
-const before = await page.locator(".card").count();
-await page.click(".filter-unread");
-const after = await page.locator(".card").count();
-ok(after < before && after >= 1, `未讀 filter hides read posts (${before} -> ${after})`);
-await page.click(".filter-unread");
-
 // Direct deep link in a fresh page (legacy #p= is canonicalised to ?p=).
 const d = await context.newPage();
 await d.goto(base + "?p=21623", { waitUntil: "networkidle" });
@@ -197,7 +182,7 @@ const m = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceS
 await m.goto(base, { waitUntil: "networkidle" });
 await m.waitForSelector(".card");
 ok(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "mobile list: no horizontal overflow");
-ok((await m.locator("header.site .group-logo").getAttribute("alt")) === "僕が見たかった青空", "mobile header logo alt text");
+ok((await m.locator("header.site .kicker").textContent())?.trim() === "僕が見たかった青空", "mobile header kicker is the group name");
 if (shots) {
   await m.screenshot({ path: `${shots}/mobile-list.png`, fullPage: true });
   const box = await m.locator("header.site").boundingBox();

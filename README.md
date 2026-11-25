@@ -15,7 +15,7 @@ src/data/posts.json          bundled fallback (generated; committed)
 src/lib/posts.ts             data layer: fetchPosts() -> Supabase public.blog_posts, fallback posts.json on error/4s timeout
 src/hooks.ts                 usePosts()
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
-src/App.tsx                  list / post view switch, search, 未讀 filter, ?p=<id> links
+src/App.tsx                  list / post view switch, search, ?p=<id> links
 src/components/              PostCard, PostView, Lightbox (swipe + keys), SearchBar, BackToTop (回到頂部)
 public/photos/<id>/N.jpg     photos (static; body photo blocks point here)
 public/manifest.webmanifest  PWA manifest (standalone; no service worker)

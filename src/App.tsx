@@ -16,19 +16,10 @@ export default function App() {
   const posts = state.status === "ready" ? state.posts : EMPTY;
   const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
-  const [unreadOnly, setUnreadOnly] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const listScroll = useRef(0);
 
-  const visible = useMemo(() => {
-    let list = filterPosts(posts, query);
-    if (unreadOnly) list = list.filter((p) => !isRead(p));
-    return list;
-  }, [posts, query, unreadOnly, isRead]);
-  const unreadCount = useMemo(
-    () => filterPosts(posts, query).filter((p) => !isRead(p)).length,
-    [posts, query, isRead],
-  );
+  const visible = useMemo(() => filterPosts(posts, query), [posts, query]);
   const idx = activeId ? posts.findIndex((p) => p.id === activeId) : -1;
   const active = idx >= 0 ? posts[idx] : null;
 
@@ -91,21 +82,13 @@ export default function App() {
   }, [activeId]);
 
   const latest = posts[0]?.dateLabel ?? "";
-  const filtered = Boolean(query) || unreadOnly;
+  const filtered = Boolean(query);
 
   return (
     <>
       <div className="wrap" id="top">
         <header className="site">
-          <p className="kicker" aria-label="僕が見たかった青空">
-            <img
-              className="group-logo"
-              src="/logo.svg"
-              alt="僕が見たかった青空"
-              width={252}
-              height={40}
-            />
-          </p>
+          <p className="kicker">僕が見たかった青空</p>
           <h1>
             <a
               href="/"
@@ -154,13 +137,7 @@ export default function App() {
             ) : (
               !activeId && (
                 <>
-                  <SearchBar
-                    query={query}
-                    onQuery={setQuery}
-                    unreadOnly={unreadOnly}
-                    onUnreadOnly={setUnreadOnly}
-                    unreadCount={unreadCount}
-                  />
+                  <SearchBar query={query} onQuery={setQuery} />
                   <p className="result-count" aria-live="polite">
                     {filtered ? `找到 ${visible.length} 篇文章` : `共 ${visible.length} 篇文章`}
                     <span className="sort-note">・依發文日期由新到舊</span>
@@ -175,15 +152,8 @@ export default function App() {
                     <div className="empty" role="status">
                       <p>找不到符合的文章。</p>
                       {filtered && (
-                        <button
-                          type="button"
-                          className="empty-clear"
-                          onClick={() => {
-                            setQuery("");
-                            setUnreadOnly(false);
-                          }}
-                        >
-                          清除篩選
+                        <button type="button" className="empty-clear" onClick={() => setQuery("")}>
+                          清除搜尋
                         </button>
                       )}
                     </div>
