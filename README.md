@@ -91,6 +91,9 @@ npm run build && npm run pack   # dist/ then .vercel/output/ + deploy-manifest.j
 Do not put `VITE_SUPABASE_*` in `.env.local` when building — those would be baked into the JS bundle.
 Local `.env.local` should only have `SUPABASE_URL` and `SUPABASE_KEY` (server-side, same values as the
 Vercel project env). Never commit `.env` files.
+On the Vercel project, set only `SUPABASE_URL` and `SUPABASE_KEY`. Mark `SUPABASE_KEY` as Sensitive
+(the URL can stay as a normal encrypted variable). Do not set `VITE_SUPABASE_*` in production, preview,
+or development — a later Git-based deploy would bake them into the public JS.
 
 For each file in `deploy-manifest.json`: `upload_file` (`teamId=team_MpzOmojkBvxnWwiQW63WOOQH`,
 `contentLength`=size, `xVercelDigest`=sha, `requestBody`=`$file:<b64 path>`). Upload only new hashes if
