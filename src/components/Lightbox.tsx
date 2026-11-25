@@ -9,6 +9,12 @@ interface Props {
 
 export default function Lightbox({ photos, index, onIndex }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
+  const indexRef = useRef(index);
+  const photosRef = useRef(photos);
+  const onIndexRef = useRef(onIndex);
+  indexRef.current = index;
+  photosRef.current = photos;
+  onIndexRef.current = onIndex;
   const open = index !== null && photos[index] !== undefined;
 
   useEffect(() => {
@@ -22,12 +28,53 @@ export default function Lightbox({ photos, index, onIndex }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") onIndex(Math.min(photos.length - 1, index! + 1));
-      if (e.key === "ArrowLeft") onIndex(Math.max(0, index! - 1));
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        onIndex(Math.min(photos.length - 1, index! + 1));
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        onIndex(Math.max(0, index! - 1));
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, index, photos.length, onIndex]);
+
+  // Swipe left/right on the photo viewer (mobile).
+  useEffect(() => {
+    if (!open) return;
+    const el = ref.current;
+    if (!el) return;
+    let x0 = 0;
+    let y0 = 0;
+    let tracking = false;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+      tracking = true;
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - x0;
+      const dy = t.clientY - y0;
+      if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      const i = indexRef.current;
+      const list = photosRef.current;
+      if (i === null) return;
+      if (dx < 0 && i < list.length - 1) onIndexRef.current(i + 1);
+      if (dx > 0 && i > 0) onIndexRef.current(i - 1);
+    };
+    el.addEventListener("touchstart", onStart, { passive: true });
+    el.addEventListener("touchend", onEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchend", onEnd);
+    };
+  }, [open]);
 
   const p = open ? photos[index!] : null;
   return (

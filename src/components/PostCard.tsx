@@ -1,12 +1,12 @@
-import { isNew } from "../lib/posts";
+import { isNew, postPath } from "../lib/posts";
 import type { Post } from "../types";
 
-export default function PostCard({ post, onOpen }: { post: Post; onOpen: (p: Post) => void }) {
+export default function PostCard({ post, onOpen, read }: { post: Post; onOpen: (p: Post) => void; read: boolean }) {
   return (
-    <li className="card">
+    <li className={"card" + (read ? " read" : "")}>
       <a
         className="card-btn"
-        href={`#p=${encodeURIComponent(post.id)}`}
+        href={postPath(post.id)}
         onClick={(e) => {
           if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
           e.preventDefault();
@@ -26,7 +26,16 @@ export default function PostCard({ post, onOpen }: { post: Post; onOpen: (p: Pos
           ) : (
             <span className="thumb-fallback" aria-hidden="true">菜那</span>
           )}
-          {isNew(post) && <span className="badge-new">NEW</span>}
+          {isNew(post) && (
+            <span className="badge-new" aria-label="NEW">
+              NEW
+            </span>
+          )}
+          {read && (
+            <span className="badge-read" aria-label="已讀">
+              已讀
+            </span>
+          )}
           {post.photo_count > 1 && <span className="badge-count" aria-label={`${post.photo_count} 張照片`}>📷 {post.photo_count}</span>}
         </span>
         <span className="card-body">

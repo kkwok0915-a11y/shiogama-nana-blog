@@ -1,10 +1,11 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BackToTop from "./components/BackToTop";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
-import { useHashPost, usePosts } from "./hooks";
-import { filterPosts } from "./lib/posts";
+import { usePosts } from "./hooks";
+import { filterPosts, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
+import { useRead } from "./lib/read";
 import type { Post } from "./types";
 
 const EMPTY: Post[] = [];
@@ -13,18 +14,48 @@ const TITLE = "塩釜菜那 部落格 中文翻譯";
 export default function App() {
   const state = usePosts();
   const posts = state.status === "ready" ? state.posts : EMPTY;
+  const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
-  const [activeId, go] = useHashPost();
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const listScroll = useRef(0);
-  const fromList = useRef(false);
 
-  const visible = useMemo(() => filterPosts(posts, query), [posts, query]);
+  const visible = useMemo(() => {
+    let list = filterPosts(posts, query);
+    if (unreadOnly) list = list.filter((p) => !isRead(p));
+    return list;
+  }, [posts, query, unreadOnly, isRead]);
+  const unreadCount = useMemo(
+    () => filterPosts(posts, query).filter((p) => !isRead(p)).length,
+    [posts, query, isRead],
+  );
   const idx = activeId ? posts.findIndex((p) => p.id === activeId) : -1;
   const active = idx >= 0 ? posts[idx] : null;
 
   useEffect(() => {
     document.title = active ? `${active.title_zh}｜${TITLE}` : TITLE;
   }, [active]);
+
+  useEffect(() => {
+    if (state.status !== "ready") return;
+    const sync = () => setActiveId(postIdFromLocation());
+    sync();
+    const id = postIdFromLocation();
+    if (id) {
+      const path = postPath(id);
+      const loc = window.location;
+      if (loc.pathname + loc.search + loc.hash !== path) {
+        // Replace without a `{p}` state so Back/close stays on the list instead of leaving the site.
+        history.replaceState(null, "", path);
+      }
+    }
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, [state.status]);
+
+  useEffect(() => {
+    if (active) mark(active);
+  }, [active, mark]);
 
   // Post view starts at the top; returning to the list restores its scroll position.
   useLayoutEffect(() => {
@@ -33,21 +64,34 @@ export default function App() {
     else window.scrollTo(0, listScroll.current);
   }, [activeId, state.status]);
 
-  const open = (p: Post) => {
-    if (!activeId) {
-      listScroll.current = window.scrollY;
-      fromList.current = true;
+  const open = useCallback((p: Post) => {
+    if (!postIdFromLocation()) listScroll.current = window.scrollY;
+    setActiveId(p.id);
+    const path = postPath(p.id);
+    if (postIdFromLocation() !== p.id || window.location.pathname + window.location.search !== path) {
+      history.pushState({ p: p.id }, "", path);
     }
-    go(p.id);
-  };
-  const back = () => {
-    if (fromList.current) {
-      fromList.current = false;
-      history.back();
-    } else go(null);
-  };
+  }, []);
+
+  /** Switch post inside an already-open view (prev/next / arrows). Replace the URL so Back still returns to the list. */
+  const switchTo = useCallback((p: Post) => {
+    setActiveId(p.id);
+    const path = postPath(p.id);
+    if (postIdFromLocation() === p.id && window.location.pathname + window.location.search === path) return;
+    history.replaceState(historyHasPostState() ? { p: p.id } : null, "", path);
+  }, []);
+
+  const back = useCallback(() => {
+    if (!postIdFromLocation() && !activeId) return;
+    setActiveId(null);
+    if (postIdFromLocation()) {
+      if (historyHasPostState()) history.back();
+      else history.replaceState(null, "", "/");
+    }
+  }, [activeId]);
 
   const latest = posts[0]?.dateLabel ?? "";
+  const filtered = Boolean(query) || unreadOnly;
 
   return (
     <>
@@ -55,7 +99,13 @@ export default function App() {
         <header className="site">
           <p className="kicker">僕が見たかった青空</p>
           <h1>
-            <a href="#" onClick={(e) => (e.preventDefault(), activeId && back())}>
+            <a
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                if (activeId) back();
+              }}
+            >
               {TITLE}
             </a>
           </h1>
@@ -79,7 +129,7 @@ export default function App() {
             {activeId && !active && (
               <p className="status">
                 找不到這篇文章。{" "}
-                <button type="button" className="pill" onClick={() => go(null)}>
+                <button type="button" className="pill" onClick={back}>
                   返回文章列表
                 </button>
               </p>
@@ -91,24 +141,44 @@ export default function App() {
                 next={idx > 0 ? posts[idx - 1] : null}
                 prev={idx < posts.length - 1 ? posts[idx + 1] : null}
                 onBack={back}
-                onOpen={(p) => go(p.id)}
+                onOpen={switchTo}
               />
             ) : (
               !activeId && (
                 <>
-                  <SearchBar query={query} onQuery={setQuery} />
+                  <SearchBar
+                    query={query}
+                    onQuery={setQuery}
+                    unreadOnly={unreadOnly}
+                    onUnreadOnly={setUnreadOnly}
+                    unreadCount={unreadCount}
+                  />
                   <p className="result-count" aria-live="polite">
-                    {query ? `找到 ${visible.length} 篇文章` : `共 ${visible.length} 篇文章`}
+                    {filtered ? `找到 ${visible.length} 篇文章` : `共 ${visible.length} 篇文章`}
                     <span className="sort-note">・依發文日期由新到舊</span>
                   </p>
                   {visible.length ? (
                     <ul className="list">
                       {visible.map((p) => (
-                        <PostCard key={p.id} post={p} onOpen={open} />
+                        <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} />
                       ))}
                     </ul>
                   ) : (
-                    <p className="empty">找不到符合的文章。</p>
+                    <div className="empty" role="status">
+                      <p>找不到符合的文章。</p>
+                      {filtered && (
+                        <button
+                          type="button"
+                          className="empty-clear"
+                          onClick={() => {
+                            setQuery("");
+                            setUnreadOnly(false);
+                          }}
+                        >
+                          清除篩選
+                        </button>
+                      )}
+                    </div>
                   )}
                 </>
               )

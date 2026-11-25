@@ -16,22 +16,3 @@ export function usePosts(): PostsState {
   }, []);
   return state;
 }
-
-/** Current `#p=<id>` from the URL hash (null on the list). */
-export function useHashPost(): [string | null, (id: string | null) => void] {
-  const read = () => {
-    const h = window.location.hash;
-    return h.startsWith("#p=") ? decodeURIComponent(h.slice(3)) || null : null;
-  };
-  const [id, setId] = useState<string | null>(read);
-  useEffect(() => {
-    const on = () => setId(read());
-    window.addEventListener("hashchange", on);
-    return () => window.removeEventListener("hashchange", on);
-  }, []);
-  const go = (next: string | null) => {
-    if (next) window.location.hash = "p=" + encodeURIComponent(next);
-    else history.pushState(null, "", window.location.pathname + window.location.search), setId(null);
-  };
-  return [id, go];
-}

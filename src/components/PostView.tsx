@@ -1,4 +1,5 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+import { postShareUrl } from "../lib/posts";
 import type { Post } from "../types";
 import Lightbox from "./Lightbox";
 
@@ -37,6 +38,22 @@ function Paragraphs({ text }: { text: string }) {
   );
 }
 
+async function copyText(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+}
+
 interface Props {
   post: Post;
   prev: Post | null; // older
@@ -48,20 +65,42 @@ interface Props {
 export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
   const [lb, setLb] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(0);
+  const prevRef = useRef(prev);
+  const nextRef = useRef(next);
+  const onOpenRef = useRef(onOpen);
+  prevRef.current = prev;
+  nextRef.current = next;
+  onOpenRef.current = onOpen;
   let photoIdx = -1;
 
-  const share = async () => {
-    const url = `${window.location.origin}${window.location.pathname}#p=${encodeURIComponent(post.id)}`;
-    try {
-      if (navigator.share && matchMedia("(pointer: coarse)").matches) await navigator.share({ title: post.title_zh, url });
-      else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
+  useEffect(() => {
+    return () => window.clearTimeout(copiedTimer.current);
+  }, []);
+
+  // Arrow keys switch posts when the photo viewer is closed (it uses the same keys).
+  useEffect(() => {
+    if (lb !== null) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "ArrowLeft" && nextRef.current) {
+        e.preventDefault();
+        onOpenRef.current(nextRef.current);
+      } else if (e.key === "ArrowRight" && prevRef.current) {
+        e.preventDefault();
+        onOpenRef.current(prevRef.current);
       }
-    } catch {
-      /* cancelled */
-    }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lb]);
+
+  const share = async () => {
+    await copyText(postShareUrl(post.id));
+    setCopied(true);
+    window.clearTimeout(copiedTimer.current);
+    copiedTimer.current = window.setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -70,8 +109,8 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
         <button type="button" className="pill" onClick={onBack}>
           ← 返回文章列表
         </button>
-        <button type="button" className="pill ghost" onClick={share}>
-          {copied ? "已複製連結 ✓" : "分享連結"}
+        <button type="button" className="pill ghost copy-link" onClick={share}>
+          複製連結
         </button>
       </div>
 
@@ -132,6 +171,11 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
       </nav>
 
       <Lightbox photos={post.photos} index={lb} onIndex={setLb} />
+      {copied && (
+        <div className="toast" role="status">
+          已複製連結
+        </div>
+      )}
     </article>
   );
 }

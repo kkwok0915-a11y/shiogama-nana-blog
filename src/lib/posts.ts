@@ -100,8 +100,30 @@ export function filterPosts(list: Post[], query: string): Post[] {
   return terms.length ? list.filter((p) => terms.every((t) => p.searchText.includes(t))) : list;
 }
 
-const NEW_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+const NEW_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+/** True when the post was added to this site within the last 7 days. */
 export const isNew = (p: Post, now = Date.now()) => {
-  const t = Date.parse(p.post_date ? p.post_date + "T00:00:00+09:00" : "");
-  return !Number.isNaN(t) && now - t < NEW_WINDOW_MS;
+  const t = Date.parse(p.added_at);
+  return !Number.isNaN(t) && now - t >= 0 && now - t < NEW_WINDOW_MS;
 };
+
+/** Shareable list/post URLs use `?p=<id>` (hash and path routes are not used). */
+export function postPath(id: string): string {
+  return `/?p=${encodeURIComponent(id)}`;
+}
+
+export function postShareUrl(id: string, origin = window.location.origin): string {
+  return `${origin}${postPath(id)}`;
+}
+
+export function postIdFromLocation(loc: Location = window.location): string | null {
+  const q = new URLSearchParams(loc.search).get("p");
+  if (q) return q;
+  const h = loc.hash;
+  if (h.startsWith("#p=")) return decodeURIComponent(h.slice(3)) || null;
+  return null;
+}
+
+export function historyHasPostState(): boolean {
+  return Boolean(window.history.state && typeof window.history.state === "object" && "p" in window.history.state);
+}

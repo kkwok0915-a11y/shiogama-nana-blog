@@ -6,16 +6,20 @@ Vite + React + TypeScript, no trackers, system fonts only.
 - Production: https://shiogama-nana-blog.vercel.app (use this `*.vercel.app` domain; team-scoped aliases are SSO-protected)
 - Vercel project `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`), team `team_MpzOmojkBvxnWwiQW63WOOQH`
 - Videos for all members live on a separate site: https://bokuao-videos.vercel.app
+- Shareable post links use `?p=<id>` (for example https://shiogama-nana-blog.vercel.app/?p=21671). A post shows a NEW badge for 7 days after it is added, and a 已讀 marker is stored only on the visitor's device.
 
 ## Layout
 
 ```
 src/data/posts.json          bundled fallback (generated; committed)
 src/lib/posts.ts             data layer: fetchPosts() -> Supabase public.blog_posts, fallback posts.json on error/4s timeout
-src/hooks.ts                 usePosts(), useHashPost() (#p=<id> deep links)
-src/App.tsx                  list / post view switch, search
-src/components/              PostCard, PostView, Lightbox, SearchBar, BackToTop (回到頂部)
+src/hooks.ts                 usePosts()
+src/lib/read.ts              on-device 已讀 markers (localStorage only)
+src/App.tsx                  list / post view switch, search, 未讀 filter, ?p=<id> links
+src/components/              PostCard, PostView, Lightbox (swipe + keys), SearchBar, BackToTop (回到頂部)
 public/photos/<id>/N.jpg     photos (static; body photo blocks point here)
+public/manifest.webmanifest  PWA manifest (standalone; no service worker)
+public/icon-*.png            192, 512, maskable, and apple-touch-icon
 scripts/posts-lib.mjs        md parser, photo copy, image size, fallback writer, upsert SQL builder
 scripts/gen-posts.mjs        all posts -> photos + posts.json + supabase/seed.sql (runs in `npm run build`)
 scripts/add-post.mjs         one post -> photos + posts.json + supabase/upserts/<id>.sql (printed)

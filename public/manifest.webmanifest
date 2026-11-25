@@ -1,0 +1,16 @@
+{
+  "name": "塩釜菜那 部落格 中文翻譯",
+  "short_name": "菜那日記",
+  "description": "塩釜菜那在僕青（僕が見たかった青空）官方部落格的繁體中文翻譯存檔。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#e4eef8",
+  "theme_color": "#e4eef8",
+  "lang": "zh-Hant",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

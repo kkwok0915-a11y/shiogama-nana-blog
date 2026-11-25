@@ -1,9 +1,12 @@
 interface Props {
   query: string;
   onQuery: (q: string) => void;
+  unreadOnly: boolean;
+  onUnreadOnly: (v: boolean) => void;
+  unreadCount: number;
 }
 
-export default function SearchBar({ query, onQuery }: Props) {
+export default function SearchBar({ query, onQuery, unreadOnly, onUnreadOnly, unreadCount }: Props) {
   return (
     <div className="toolbar" role="search">
       <label className="search">
@@ -20,8 +23,24 @@ export default function SearchBar({ query, onQuery }: Props) {
           placeholder="搜尋標題、內文或日期（例如 2026.11）"
           onChange={(e) => onQuery(e.target.value)}
           enterKeyHint="search"
+          autoComplete="off"
         />
+        {query && (
+          <button type="button" className="search-clear" aria-label="清除搜尋" onClick={() => onQuery("")}>
+            ✕
+          </button>
+        )}
       </label>
+      <div className="chip-row">
+        <button
+          type="button"
+          className={"chip filter-unread" + (unreadOnly ? " current" : "")}
+          aria-pressed={unreadOnly}
+          onClick={() => onUnreadOnly(!unreadOnly)}
+        >
+          未讀 <span className="count">{unreadCount}</span>
+        </button>
+      </div>
     </div>
   );
 }
