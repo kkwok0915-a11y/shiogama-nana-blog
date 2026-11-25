@@ -252,6 +252,10 @@ ok(!(await m.locator("dialog.lightbox[open]").count()), "mobile close button exi
 await m.evaluate(() => window.scrollTo(0, 1200));
 await m.waitForSelector(".to-top.visible");
 ok(true, "mobile: back-to-top appears after scrolling");
+{
+  const bottom = await m.$eval(".to-top", (el) => getComputedStyle(el).bottom);
+  ok(/80px/.test(bottom) || parseFloat(bottom) >= 80, `to-top is raised above the iOS toolbar zone (bottom=${bottom})`);
+}
 if (shots) await m.waitForTimeout(400), await m.screenshot({ path: `${shots}/mobile-back-to-top.png` });
 
 // Unknown ?p= shows a not-found state; Esc closes the photo viewer when one is open.
