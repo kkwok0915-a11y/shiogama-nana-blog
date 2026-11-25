@@ -7,6 +7,9 @@ Vite + React + TypeScript, no trackers, system fonts only.
 - Vercel project `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`), team `team_MpzOmojkBvxnWwiQW63WOOQH`
 - Videos for all members live on a separate site: https://bokuao-videos.vercel.app
 - Shareable post links use `?p=<id>` (for example https://shiogama-nana-blog.vercel.app/?p=21671). A post shows a NEW badge for 7 days after it is added, and a 已讀 marker is stored only on the visitor's device.
+- The list has a search box (title, translated body, and Japanese title; with a clear button), a month jump list (`2026年11月 (n)`), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
+- The post view has a「顯示日文原文」toggle that switches the heading between the Chinese and Japanese titles and remembers the choice in `localStorage`. The full official Japanese body is not hosted here;「閱讀官方原文」still opens the original post.
+- Share links (`/?p=<id>`) and the site root include Open Graph / Twitter meta tags (title, Traditional Chinese excerpt, first photo). A server function injects the tags into `index.html` because crawlers do not run JavaScript.
 
 ## Layout
 
@@ -15,8 +18,8 @@ src/data/posts.json          bundled fallback (generated; committed)
 src/lib/posts.ts             data layer: fetchPosts() -> GET /api/posts, fallback posts.json on error/4s timeout
 src/hooks.ts                 usePosts()
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
-src/App.tsx                  list / post view switch, search, ?p=<id> links
-src/components/              PostCard, PostView, Lightbox (swipe + keys), SearchBar, BackToTop (回到頂部)
+src/App.tsx                  list / post / gallery switch, search, month archive, ?p=<id> links
+src/components/              PostCard, PostView (日文標題 toggle), Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop
 public/photos/<id>/N.jpg     photos (static; body photo blocks point here)
 public/manifest.webmanifest  PWA manifest (standalone; no service worker)
 public/icon-*.png            192, 512, maskable, and apple-touch-icon
@@ -25,7 +28,7 @@ scripts/gen-posts.mjs        all posts -> photos + posts.json + supabase/seed.sq
 scripts/add-post.mjs         one post -> photos + posts.json + supabase/upserts/<id>.sql (printed)
 scripts/pack-output.mjs      Build Output API v3 pack of dist/ + /api functions; writes deploy-manifest.json
 scripts/smoke.mjs            headless Chrome test (+ screenshots)
-api/                         server handlers for GET /api/posts and GET /api/settings (no keys in the browser)
+api/                         server handlers for GET /api/posts, GET /api/settings, and HTML link previews (no keys in the browser)
 supabase/migrations/         schema + RLS
 ```
 
@@ -94,4 +97,7 @@ Then `create_deployment` with `teamId`, `skipAutoDetectionConfirmation=1`, `forc
 `.vercel/output/functions/api/posts.func/index.js`).
 
 Confirm https://shiogama-nana-blog.vercel.app/api/posts and `/api/settings` return JSON, and that
-the live JS assets contain neither `supabase.co` nor `sb_publishable`.
+the live JS assets contain neither `supabase.co` nor `sb_publishable`. With a crawler User-Agent
+(`facebookexternalhit` or `Twitterbot`) and with a normal browser UA, `/?p=<id>` HTML should include
+`og:title`, `og:description` (a short Traditional Chinese excerpt), `og:image` (the first photo) and
+`og:url` for that post; the root URL should include the site-wide tags.

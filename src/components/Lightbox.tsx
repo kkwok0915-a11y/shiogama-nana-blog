@@ -5,9 +5,10 @@ interface Props {
   photos: PhotoBlock[];
   index: number | null;
   onIndex: (i: number | null) => void;
+  action?: { label: string; onClick: () => void } | null;
 }
 
-export default function Lightbox({ photos, index, onIndex }: Props) {
+export default function Lightbox({ photos, index, onIndex, action }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const indexRef = useRef(index);
   const photosRef = useRef(photos);
@@ -104,6 +105,11 @@ export default function Lightbox({ photos, index, onIndex }: Props) {
             >
               ›
             </button>
+            {action && (
+              <button type="button" className="lb-action" onClick={action.onClick}>
+                {action.label}
+              </button>
+            )}
             <button type="button" className="lb-btn lb-close" onClick={() => onIndex(null)} aria-label="關閉">
               ✕
             </button>

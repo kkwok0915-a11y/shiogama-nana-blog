@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BackToTop from "./components/BackToTop";
+import MonthNav from "./components/MonthNav";
+import PhotoGallery from "./components/PhotoGallery";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
 import { usePosts } from "./hooks";
-import { filterPosts, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
+import { filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
 import { useRead } from "./lib/read";
 import type { Post } from "./types";
 import UpgradeNotice from "./components/UpgradeNotice";
@@ -12,15 +14,19 @@ import UpgradeNotice from "./components/UpgradeNotice";
 const EMPTY: Post[] = [];
 const TITLE = "塩釜菜那 部落格 中文翻譯";
 
+type ListView = "list" | "gallery";
+
 export default function App() {
   const state = usePosts();
   const posts = state.status === "ready" ? state.posts : EMPTY;
   const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<ListView>("list");
   const [activeId, setActiveId] = useState<string | null>(null);
   const listScroll = useRef(0);
 
   const visible = useMemo(() => filterPosts(posts, query), [posts, query]);
+  const months = useMemo(() => groupByMonth(visible), [visible]);
   const idx = activeId ? posts.findIndex((p) => p.id === activeId) : -1;
   const active = idx >= 0 ? posts[idx] : null;
 
@@ -139,17 +145,56 @@ export default function App() {
             ) : (
               !activeId && (
                 <>
-                  <SearchBar query={query} onQuery={setQuery} />
+                  <div className="toolbar" role="search">
+                    <SearchBar query={query} onQuery={setQuery} bare />
+                    <div className="chip-row view-tabs" role="tablist" aria-label="瀏覽方式">
+                      <button
+                        type="button"
+                        role="tab"
+                        className={"chip" + (view === "list" ? " current" : "")}
+                        aria-selected={view === "list"}
+                        onClick={() => setView("list")}
+                      >
+                        文章
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        className={"chip" + (view === "gallery" ? " current" : "")}
+                        aria-selected={view === "gallery"}
+                        onClick={() => setView("gallery")}
+                      >
+                        相簿
+                      </button>
+                    </div>
+                    {view === "list" && <MonthNav months={months} />}
+                  </div>
                   <p className="result-count" aria-live="polite">
-                    {filtered ? `找到 ${visible.length} 篇文章` : `共 ${visible.length} 篇文章`}
+                    {view === "gallery"
+                      ? filtered
+                        ? `找到 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
+                        : `共 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
+                      : filtered
+                        ? `找到 ${visible.length} 篇文章`
+                        : `共 ${visible.length} 篇文章`}
                     <span className="sort-note">・依發文日期由新到舊</span>
                   </p>
-                  {visible.length ? (
-                    <ul className="list">
-                      {visible.map((p) => (
-                        <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} />
-                      ))}
-                    </ul>
+                  {view === "gallery" ? (
+                    <PhotoGallery posts={visible} onOpenPost={open} />
+                  ) : visible.length ? (
+                    months.map((m) => (
+                      <section key={m.key} className="month-section" aria-labelledby={`month-${m.key}`}>
+                        <h2 className="month-heading" id={`month-${m.key}`}>
+                          {m.label}
+                          <span className="month-count">（{m.count}）</span>
+                        </h2>
+                        <ul className="list">
+                          {m.items.map((p) => (
+                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} />
+                          ))}
+                        </ul>
+                      </section>
+                    ))
                   ) : (
                     <div className="empty" role="status">
                       <p>找不到符合的文章。</p>

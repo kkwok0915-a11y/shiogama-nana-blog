@@ -2,7 +2,7 @@
 // then write deploy-manifest.json + upload-payloads for MCP deploys.
 // Usage: node scripts/pack-output.mjs <fn> [<fn>...]
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -145,22 +145,30 @@ mkdirSync(join(out, "static"), { recursive: true });
 cpSync(dist, join(out, "static"), { recursive: true });
 try { rmSync(join(out, "static", "vercel.json")); } catch {}
 
+const vcConfig = JSON.stringify(
+  { runtime: "nodejs22.x", handler: "index.js", launcherType: "Nodejs", shouldAddHelpers: true },
+  null,
+  2,
+) + "\n";
+
 for (const name of fns) {
-  if (!HANDLERS[name]) {
+  const destDir = join(out, "functions", "api", `${name}.func`);
+  mkdirSync(destDir, { recursive: true });
+  if (name === "og") {
+    const ogSrc = join(root, "api", "og.cjs");
+    if (!existsSync(ogSrc)) {
+      console.error("missing api/og.cjs");
+      process.exit(1);
+    }
+    writeFileSync(join(destDir, "index.js"), `"use strict";\n${SHARED}\n${readFileSync(ogSrc, "utf8")}`);
+    cpSync(join(dist, "index.html"), join(destDir, "index.html"));
+  } else if (HANDLERS[name]) {
+    writeFileSync(join(destDir, "index.js"), `"use strict";\n${SHARED}\n${HANDLERS[name]}`);
+  } else {
     console.error("unknown function:", name);
     process.exit(1);
   }
-  const destDir = join(out, "functions", "api", `${name}.func`);
-  mkdirSync(destDir, { recursive: true });
-  writeFileSync(join(destDir, "index.js"), `"use strict";\n${SHARED}\n${HANDLERS[name]}`);
-  writeFileSync(
-    join(destDir, ".vc-config.json"),
-    JSON.stringify(
-      { runtime: "nodejs22.x", handler: "index.js", launcherType: "Nodejs", shouldAddHelpers: true },
-      null,
-      2,
-    ) + "\n",
-  );
+  writeFileSync(join(destDir, ".vc-config.json"), vcConfig);
 }
 
 const apiRoutes = fns.map((name) => {
@@ -174,8 +182,18 @@ const apiRoutes = fns.map((name) => {
   }
   return route;
 });
+// Per-item link previews: send /?v= or /?p= (and legacy /v/<id>) through the og function
+// BEFORE the static index.html. vercel.json rewrites are not applied on prebuilt uploads.
+const ogQuery = fns.includes("videos") ? "v" : fns.includes("posts") ? "p" : null;
+const ogRoutes = fns.includes("og") && ogQuery
+  ? [
+      { src: "^/$", has: [{ type: "query", key: ogQuery }], dest: "/api/og" },
+      { src: `^/${ogQuery}/([^/]+)/?$`, dest: `/api/og?${ogQuery}=$1` },
+    ]
+  : [];
 const routes = [
   ...apiRoutes,
+  ...ogRoutes,
   { src: "^/assets/(.*)$", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, continue: true },
   { src: "^/photos/(.*)$", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, continue: true },
   { handle: "filesystem" },

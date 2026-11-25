@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { postShareUrl } from "../lib/posts";
+import { readShowJp, writeShowJp } from "../lib/showJp";
 import type { Post } from "../types";
 import Lightbox from "./Lightbox";
 
@@ -65,6 +66,7 @@ interface Props {
 export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
   const [lb, setLb] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showJp, setShowJp] = useState(readShowJp);
   const copiedTimer = useRef(0);
   const prevRef = useRef(prev);
   const nextRef = useRef(next);
@@ -103,6 +105,17 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
     copiedTimer.current = window.setTimeout(() => setCopied(false), 2000);
   };
 
+  const toggleJp = () => {
+    setShowJp((on) => {
+      const next = !on;
+      writeShowJp(next);
+      return next;
+    });
+  };
+
+  const mainTitle = showJp && post.title_jp ? post.title_jp : post.title_zh;
+  const mainLang = showJp && post.title_jp ? "ja" : undefined;
+
   return (
     <article className="post" aria-labelledby="post-title">
       <div className="post-nav top">
@@ -116,17 +129,35 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
 
       <header className="post-head">
         <p className="post-date">{post.dateLabel}</p>
-        <h2 id="post-title">{post.title_zh}</h2>
+        <h2 id="post-title" lang={mainLang}>
+          {mainTitle}
+        </h2>
         {post.title_jp && (
-          <p className="post-jp" lang="ja">
-            原文標題：{post.title_jp}
-          </p>
+          showJp ? (
+            <p className="post-jp">譯文標題：{post.title_zh}</p>
+          ) : (
+            <p className="post-jp" lang="ja">
+              原文標題：{post.title_jp}
+            </p>
+          )
         )}
-        {post.original_url && (
-          <a className="original" href={post.original_url} target="_blank" rel="noopener noreferrer">
-            閱讀日文原文 ↗
-          </a>
-        )}
+        <div className="post-head-actions">
+          {post.title_jp && (
+            <button
+              type="button"
+              className={"pill ghost jp-toggle" + (showJp ? " on" : "")}
+              aria-pressed={showJp}
+              onClick={toggleJp}
+            >
+              {showJp ? "顯示中文標題" : "顯示日文原文"}
+            </button>
+          )}
+          {post.original_url && (
+            <a className="original" href={post.original_url} target="_blank" rel="noopener noreferrer">
+              閱讀官方原文 ↗
+            </a>
+          )}
+        </div>
       </header>
 
       <div className="post-body">

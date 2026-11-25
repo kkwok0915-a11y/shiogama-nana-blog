@@ -115,3 +115,40 @@ export function postIdFromLocation(loc: Location = window.location): string | nu
 export function historyHasPostState(): boolean {
   return Boolean(window.history.state && typeof window.history.state === "object" && "p" in window.history.state);
 }
+
+export function monthKey(date: string | null): string {
+  return (date || "").slice(0, 7);
+}
+
+export function monthLabel(key: string): string {
+  const [y, m] = key.split("-");
+  if (!y || !m) return "其他";
+  return `${y}年${Number(m)}月`;
+}
+
+export interface MonthGroup<T = Post> {
+  key: string;
+  label: string;
+  count: number;
+  items: T[];
+}
+
+/** Group already-sorted (newest first) items by YYYY-MM, preserving month order. */
+export function groupByMonth<T extends { post_date: string | null }>(list: T[]): MonthGroup<T>[] {
+  const map = new Map<string, T[]>();
+  const order: string[] = [];
+  for (const item of list) {
+    const key = monthKey(item.post_date) || "unknown";
+    if (!map.has(key)) {
+      map.set(key, []);
+      order.push(key);
+    }
+    map.get(key)!.push(item);
+  }
+  return order.map((key) => ({
+    key,
+    label: key === "unknown" ? "其他" : monthLabel(key),
+    count: map.get(key)!.length,
+    items: map.get(key)!,
+  }));
+}

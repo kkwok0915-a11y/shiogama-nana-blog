@@ -72,6 +72,7 @@ header.site .lede { margin: 0.5rem auto 0; max-width: 36rem; color: var(--ink-so
   padding: 0.5rem 1rem; min-height: 44px;
 }
 .search input { padding-left: 2.4rem; padding-right: 2.6rem; }
+.search input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
 .search input:focus, .sort select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 .search-clear {
   position: absolute; right: 0.25rem; top: 50%; transform: translateY(-50%);
@@ -292,3 +293,50 @@ footer.site p { margin: 0.2rem 0; }
 .upgrade-dismiss:hover { background: color-mix(in srgb, var(--accent) 16%, #fff); color: var(--ink); }
 .upgrade-dismiss:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+/* View tabs + month jump list live inside the sticky toolbar */
+.view-tabs { margin-top: 0.55rem; }
+.months {
+  display: flex; gap: 0.45rem; margin-top: 0.55rem;
+  overflow-x: auto; scrollbar-width: none; padding-bottom: 2px;
+}
+.months::-webkit-scrollbar { display: none; }
+.month-section { margin-top: 0.5rem; }
+.month-heading {
+  margin: 1.1rem 0 0.7rem;
+  font-size: 1.05rem; font-weight: 700; color: var(--ink);
+  scroll-margin-top: 7.5rem;
+}
+.month-count { color: var(--ink-mute); font-weight: 500; margin-left: 0.15rem; }
+
+/* Photo gallery */
+.gallery {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.55rem;
+}
+.gallery-btn {
+  display: block; width: 100%; padding: 0; border: none; cursor: zoom-in;
+  border-radius: 12px; overflow: hidden; background: var(--sky-1);
+  aspect-ratio: 1; box-shadow: var(--shadow);
+}
+.gallery-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.gallery-btn img { width: 100%; height: 100%; object-fit: cover; display: block; vertical-align: middle; }
+
+.post-head-actions {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center;
+  margin-top: 0.35rem;
+}
+.jp-toggle { font-size: 0.85rem; }
+.jp-toggle.on { background: var(--accent); color: #fff; }
+.lb-action {
+  font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  min-height: 44px; padding: 0 0.9rem; margin-left: 0.25rem;
+  border: none; border-radius: 999px;
+  background: #fff; color: #1c2838;
+}
+.lb-action:hover { background: var(--sky-1); }
+
+@media (max-width: 600px) {
+  .gallery { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.4rem; }
+  .month-heading { scroll-margin-top: 8.5rem; }
+}
