@@ -8,7 +8,7 @@ Vite + React + TypeScript, no trackers, system fonts only.
 - Videos for all members live on a separate site: https://bokuao-videos.vercel.app
 - Shareable post links use `?p=<id>` (for example https://shiogama-nana-blog.vercel.app/?p=21671). A post shows a NEW badge for 7 days after it is added, and a 已讀 marker is stored only on the visitor's device.
 - The list has a search box (title, translated body, and Japanese title; with a clear button), a month jump list (`2026年11月 (n)`), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
-- The post view has a「顯示日文原文」toggle that switches the heading between the Chinese and Japanese titles and remembers the choice in `localStorage`. The full official Japanese body is not hosted here;「閱讀官方原文」still opens the original post.
+- The post view keeps a「閱讀官方原文」link to the official Japanese post.
 - Share links (`/?p=<id>`) and the site root include Open Graph / Twitter meta tags (title, Traditional Chinese excerpt, first photo). A server function injects the tags into `index.html` because crawlers do not run JavaScript.
 
 ## Layout
@@ -19,7 +19,7 @@ src/lib/posts.ts             data layer: fetchPosts() -> GET /api/posts, fallbac
 src/hooks.ts                 usePosts()
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
 src/App.tsx                  list / post / gallery switch, search, month archive, ?p=<id> links
-src/components/              PostCard, PostView (日文標題 toggle), Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop
+src/components/              PostCard, PostView, Lightbox, PhotoGallery, SearchBar, MonthNav, BackToTop
 public/photos/<id>/N.jpg     photos (static; body photo blocks point here)
 public/manifest.webmanifest  PWA manifest (standalone; no service worker)
 public/icon-*.png            192, 512, maskable, and apple-touch-icon

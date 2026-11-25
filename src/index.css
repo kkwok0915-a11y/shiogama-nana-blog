@@ -322,12 +322,6 @@ footer.site p { margin: 0.2rem 0; }
 .gallery-btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .gallery-btn img { width: 100%; height: 100%; object-fit: cover; display: block; vertical-align: middle; }
 
-.post-head-actions {
-  display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center;
-  margin-top: 0.35rem;
-}
-.jp-toggle { font-size: 0.85rem; }
-.jp-toggle.on { background: var(--accent); color: #fff; }
 .lb-action {
   font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer;
   min-height: 44px; padding: 0 0.9rem; margin-left: 0.25rem;
