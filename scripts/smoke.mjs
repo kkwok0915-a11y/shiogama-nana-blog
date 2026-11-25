@@ -6,7 +6,7 @@ import { mkdirSync } from "node:fs";
 const args = process.argv.slice(2);
 const si = args.indexOf("--shots");
 const shots = si >= 0 ? args[si + 1] : null;
-const url = (args.find((a, i) => !a.startsWith("--") && i !== si + 1) ?? "http://localhost:4174/").replace(/[?#].*$/, "");
+const url = (args.find((a, i) => !a.startsWith("--") && (si < 0 || i !== si + 1)) ?? "http://localhost:4174/").replace(/[?#].*$/, "");
 const base = new URL(url).origin + "/";
 const exe = process.env.CHROME_PATH ?? "/usr/bin/google-chrome";
 if (shots) mkdirSync(shots, { recursive: true });
