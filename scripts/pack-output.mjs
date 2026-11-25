@@ -41,14 +41,16 @@ async function supabaseSelect(env, table, { select, query = {}, order } = {}) {
   return res.json();
 }
 function json(status, body, cache) {
-  return {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": cache || "no-store",
-    },
-    body: JSON.stringify(body),
+  const value = cache || "no-store";
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": value,
   };
+  if (value === "no-store") {
+    headers["CDN-Cache-Control"] = "no-store";
+    headers["Vercel-CDN-Cache-Control"] = "no-store";
+  }
+  return { status, headers, body: JSON.stringify(body) };
 }
 function fail(err) {
   return json(err.status || 502, { error: "unavailable" }, "no-store");
@@ -82,7 +84,7 @@ function nodeHandler(handle) {
 
 const HANDLERS = {
   settings: `
-const SETTINGS_CACHE = "public, s-maxage=60, stale-while-revalidate=60";
+const SETTINGS_CACHE = "no-store";
 async function handleSettings(env) {
   try {
     const rows = await supabaseSelect(env, "site_settings", {
@@ -161,7 +163,17 @@ for (const name of fns) {
   );
 }
 
-const apiRoutes = fns.map((name) => ({ src: `^/api/${name}$`, dest: `/api/${name}` }));
+const apiRoutes = fns.map((name) => {
+  const route = { src: `^/api/${name}$`, dest: `/api/${name}` };
+  if (name === "settings") {
+    route.headers = {
+      "Cache-Control": "no-store",
+      "CDN-Cache-Control": "no-store",
+      "Vercel-CDN-Cache-Control": "no-store",
+    };
+  }
+  return route;
+});
 const routes = [
   ...apiRoutes,
   { src: "^/assets/(.*)$", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, continue: true },

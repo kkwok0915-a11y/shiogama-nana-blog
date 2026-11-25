@@ -48,13 +48,13 @@ Supabase connector's `execute_sql` (service role on the server side), never a ke
 The browser never talks to Supabase. A Vercel Function `GET /api/posts` (and `GET /api/posts?id=<id>`) reads
 `public.blog_posts` on the server using `SUPABASE_URL` and `SUPABASE_KEY` (publishable key, RLS read-only)
 set on the Vercel project (and in local gitignored `.env.local` for `npm run preview`). `GET /api/settings`
-reads `public.site_settings` (the upgrade notice) with a short cache (`s-maxage=60`). If the API fails, the
-site falls back to the bundled posts.json.
+reads `public.site_settings` (the upgrade notice) with `Cache-Control: no-store`, so a change shows up
+the next time the page is loaded. If the API fails, the site falls back to the bundled posts.json.
 
 The upgrade notice is toggled in the Table Editor, no redeploy needed:
 https://supabase.com/dashboard/project/jqsyymshdlrghyqtbcmp/editor/17677?schema=public
 Edit `notice_enabled` (true/false) and/or `notice_text` on the single row (`id = 1`) and save. The banner
-updates within about a minute (CDN cache).
+updates on the next page load.
 
 ## Adding a post (nightly)
 

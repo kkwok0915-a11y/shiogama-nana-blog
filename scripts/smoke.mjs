@@ -59,7 +59,7 @@ const settingsApi = await page.request.get(new URL("/api/settings", base).href);
 ok(settingsApi.ok(), `/api/settings HTTP ${settingsApi.status()}`);
 const settings = await settingsApi.json();
 ok("notice_enabled" in settings, "settings has notice_enabled");
-ok(/s-maxage=60/.test(settingsApi.headers()["cache-control"] || ""), `/api/settings cache ${settingsApi.headers()["cache-control"]}`);
+ok(/no-store/.test(settingsApi.headers()["cache-control"] || ""), `/api/settings cache ${settingsApi.headers()["cache-control"]}`);
 const bundleHref = await page.locator('script[src*="/assets/index-"]').first().getAttribute("src");
 const bundleRes = await page.request.get(new URL(bundleHref, base).href);
 const bundleText = await bundleRes.text();

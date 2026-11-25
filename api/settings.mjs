@@ -1,6 +1,6 @@
 import { fail, json, supabaseSelect } from "./supabase.mjs";
 
-export const SETTINGS_CACHE = "public, s-maxage=60, stale-while-revalidate=60";
+export const SETTINGS_CACHE = "no-store";
 
 export async function handleSettings(env) {
   try {

@@ -10,7 +10,7 @@ export default function UpgradeNotice() {
     let cancelled = false;
     const ac = new AbortController();
     const timer = window.setTimeout(() => ac.abort(), API_TIMEOUT_MS);
-    fetch("/api/settings", { signal: ac.signal })
+    fetch("/api/settings", { signal: ac.signal, cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data?.notice_enabled) return;

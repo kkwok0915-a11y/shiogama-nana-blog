@@ -27,14 +27,15 @@ export async function supabaseSelect(env, table, { select, query = {}, order } =
 }
 
 export function json(status, body, cache = "no-store") {
-  return {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": cache,
-    },
-    body: JSON.stringify(body),
+  const headers = {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": cache,
   };
+  if (cache === "no-store") {
+    headers["CDN-Cache-Control"] = "no-store";
+    headers["Vercel-CDN-Cache-Control"] = "no-store";
+  }
+  return { status, headers, body: JSON.stringify(body) };
 }
 
 export function fail(err) {
