@@ -44,6 +44,18 @@ ok((await page.locator(".card .thumb img").count()) === n, "every card has a thu
 ok((await page.locator(".card-excerpt").count()) === n, "every card has an excerpt");
 const html = await page.content();
 ok(!/kwok|kkwok|@gmail|a11ys|stephen|スティーブン/i.test(html), "no personal info in page HTML");
+const logo = page.locator("header.site .group-logo");
+ok((await logo.count()) === 1, "official group logo in the header");
+ok((await logo.getAttribute("alt")) === "僕が見たかった青空", "logo alt text is the group name");
+ok((await page.locator("header.site .kicker").getAttribute("aria-label")) === "僕が見たかった青空", "logo aria-label is the group name");
+{
+  const lr = await page.request.get(new URL("/logo.svg", base).href);
+  ok(lr.ok() && (lr.headers()["content-type"] || "").includes("svg"), `logo.svg HTTP ${lr.status()} ${lr.headers()["content-type"]}`);
+}
+if (shots) {
+  const box = await page.locator("header.site").boundingBox();
+  if (box) await page.screenshot({ path: `${shots}/desktop-header.png`, clip: { x: 0, y: 0, width: 1280, height: Math.min(900, Math.ceil(box.y + box.height + 24)) } });
+}
 const warn = await page.locator(".status.warn").count();
 console.log(`info  data source warning shown: ${warn ? "yes (fallback)" : "no"}`);
 
@@ -185,7 +197,12 @@ const m = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceS
 await m.goto(base, { waitUntil: "networkidle" });
 await m.waitForSelector(".card");
 ok(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "mobile list: no horizontal overflow");
-if (shots) await m.screenshot({ path: `${shots}/mobile-list.png`, fullPage: true });
+ok((await m.locator("header.site .group-logo").getAttribute("alt")) === "僕が見たかった青空", "mobile header logo alt text");
+if (shots) {
+  await m.screenshot({ path: `${shots}/mobile-list.png`, fullPage: true });
+  const box = await m.locator("header.site").boundingBox();
+  if (box) await m.screenshot({ path: `${shots}/mobile-header.png`, clip: { x: 0, y: 0, width: 390, height: Math.min(844, Math.ceil(box.y + box.height + 16)) } });
+}
 await m.tap(".card-btn >> nth=0");
 await m.waitForSelector("article.post");
 ok(!(await m.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), "mobile post: no horizontal overflow");

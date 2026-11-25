@@ -97,7 +97,15 @@ export default function App() {
     <>
       <div className="wrap" id="top">
         <header className="site">
-          <p className="kicker">僕が見たかった青空</p>
+          <p className="kicker" aria-label="僕が見たかった青空">
+            <img
+              className="group-logo"
+              src="/logo.svg"
+              alt="僕が見たかった青空"
+              width={252}
+              height={40}
+            />
+          </p>
           <h1>
             <a
               href="/"
