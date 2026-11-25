@@ -10,8 +10,9 @@
     "typecheck": "tsc -b",
     "build": "node scripts/gen-posts.mjs && tsc -b && vite build",
     "preview": "vite preview --port 4174 --strictPort",
-    "manifest": "cp scripts/static-vercel.json dist/vercel.json && node scripts/manifest.mjs",
-    "test:smoke": "node scripts/smoke.mjs"
+    "manifest": "npm run pack",
+    "test:smoke": "node scripts/smoke.mjs",
+    "pack": "node scripts/pack-output.mjs posts settings"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

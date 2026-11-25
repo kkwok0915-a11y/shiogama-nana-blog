@@ -1,16 +1,12 @@
 /**
  * Data layer. The UI only calls `fetchPosts()`.
- * - With VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (publishable key) set at build time,
- *   rows come from Supabase `public.blog_posts` (RLS: published rows only).
- * - Otherwise, or on error/timeout, the bundled src/data/posts.json is used.
+ * - Rows come from GET /api/posts (server-side Supabase; published only).
+ * - If the API fails, times out, or returns nothing, the bundled src/data/posts.json is used.
  */
 import raw from "../data/posts.json";
 import type { Block, DataSource, PhotoBlock, Post, PostRow } from "../types";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-const SUPABASE_TIMEOUT_MS = 4000;
-export const supabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
+const API_TIMEOUT_MS = 4000;
 
 const GREETING = /^(おやっとさ|歡迎來到我的部落格|ようこそ)/;
 const SAFE_SRC = /^\/photos\/[\w-]+\/[\w.-]+$|^https:\/\//;
@@ -59,17 +55,12 @@ const toPosts = (rows: PostRow[]) => sortPosts(rows.map(normalize).filter((p): p
 
 export const jsonRows = (): PostRow[] => (raw as unknown as { posts: PostRow[] }).posts ?? [];
 
-async function fetchFromSupabase(): Promise<PostRow[]> {
-  const { createClient } = await import("@supabase/supabase-js");
-  const client = createClient(SUPABASE_URL!, SUPABASE_KEY!, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data, error } = await client
-    .from("blog_posts")
-    .select("id, title_zh, title_jp, post_date, original_url, body, photo_count, added_at, published")
-    .eq("published", true)
-    .order("post_date", { ascending: false })
-    .abortSignal(AbortSignal.timeout(SUPABASE_TIMEOUT_MS));
-  if (error) throw new Error(error.message);
-  return (data ?? []) as PostRow[];
+async function fetchFromApi(): Promise<PostRow[]> {
+  const res = await fetch("/api/posts", { signal: AbortSignal.timeout(API_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`api ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data)) throw new Error("bad payload");
+  return data as PostRow[];
 }
 
 export interface FetchResult {
@@ -79,20 +70,17 @@ export interface FetchResult {
 }
 
 export async function fetchPosts(): Promise<FetchResult> {
-  if (supabaseConfigured) {
-    try {
-      const rows = await Promise.race([
-        fetchFromSupabase(),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), SUPABASE_TIMEOUT_MS + 500)),
-      ]);
-      if (rows.length) return { posts: toPosts(rows), source: "supabase" };
-      throw new Error("empty");
-    } catch (err) {
-      console.warn("Supabase fetch failed; using bundled posts.json", err);
-      return { posts: toPosts(jsonRows()), source: "json", warning: "資料庫暫時無法連線，以下為備份內容。" };
-    }
+  try {
+    const rows = await Promise.race([
+      fetchFromApi(),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), API_TIMEOUT_MS + 500)),
+    ]);
+    if (rows.length) return { posts: toPosts(rows), source: "supabase" };
+    throw new Error("empty");
+  } catch (err) {
+    console.warn("API fetch failed; using bundled posts.json", err);
+    return { posts: toPosts(jsonRows()), source: "json", warning: "資料庫暫時無法連線，以下為備份內容。" };
   }
-  return { posts: toPosts(jsonRows()), source: "json" };
 }
 
 export function filterPosts(list: Post[], query: string): Post[] {

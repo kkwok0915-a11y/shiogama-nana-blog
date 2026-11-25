@@ -45,6 +45,32 @@ ok((await page.locator(".card-excerpt").count()) === n, "every card has an excer
 const html = await page.content();
 ok(!/kwok|kkwok|@gmail|a11ys|stephen|スティーブン/i.test(html), "no personal info in page HTML");
 ok((await page.locator("header.site .kicker").textContent())?.trim() === "僕が見たかった青空", "header kicker is the group name");
+
+const postsApi = await page.request.get(new URL("/api/posts", base).href);
+ok(postsApi.ok(), `/api/posts HTTP ${postsApi.status()}`);
+const postsJson = await postsApi.json();
+ok(Array.isArray(postsJson) && postsJson.length >= 4, `/api/posts returns rows (${postsJson.length})`);
+ok(/s-maxage=300/.test(postsApi.headers()["cache-control"] || ""), `/api/posts cache ${postsApi.headers()["cache-control"]}`);
+const one = await page.request.get(new URL(`/api/posts?id=${postsJson[0].id}`, base).href);
+ok(one.ok(), `/api/posts?id= HTTP ${one.status()}`);
+const oneJson = await one.json();
+ok(Array.isArray(oneJson) && oneJson.length === 1 && oneJson[0].id === postsJson[0].id, "/api/posts?id= returns one post");
+const settingsApi = await page.request.get(new URL("/api/settings", base).href);
+ok(settingsApi.ok(), `/api/settings HTTP ${settingsApi.status()}`);
+const settings = await settingsApi.json();
+ok("notice_enabled" in settings, "settings has notice_enabled");
+ok(/s-maxage=60/.test(settingsApi.headers()["cache-control"] || ""), `/api/settings cache ${settingsApi.headers()["cache-control"]}`);
+const bundleHref = await page.locator('script[src*="/assets/index-"]').first().getAttribute("src");
+const bundleRes = await page.request.get(new URL(bundleHref, base).href);
+const bundleText = await bundleRes.text();
+ok(!/supabase\.co|sb_publishable/i.test(bundleText), "live JS bundle has no Supabase URL or publishable key");
+if (settings.notice_enabled && settings.notice_text) {
+  await page.waitForSelector(".upgrade-notice");
+  ok((await page.locator(".upgrade-notice p").textContent())?.trim() === settings.notice_text.trim(), "upgrade notice shows the API text");
+} else {
+  ok((await page.locator(".upgrade-notice").count()) === 0, "upgrade notice hidden when disabled");
+}
+
 if (shots) {
   const box = await page.locator("header.site").boundingBox();
   if (box) await page.screenshot({ path: `${shots}/desktop-header.png`, clip: { x: 0, y: 0, width: 1280, height: Math.min(900, Math.ceil(box.y + box.height + 24)) } });
@@ -159,7 +185,7 @@ if (shots) await page.screenshot({ path: `${shots}/desktop-new-and-read.png`, fu
 
 // Direct deep link in a fresh page (legacy #p= is canonicalised to ?p=).
 const d = await context.newPage();
-await d.goto(base + "?p=21623", { waitUntil: "networkidle" });
+await d.goto(base + "?p=21623", { waitUntil: "load" });
 await d.waitForSelector("article.post");
 ok((await d.textContent("#post-title")).includes("刨冰"), "direct ?p=21623 opens that post");
 ok((await d.title()).includes("刨冰"), "direct ?p= sets document.title");

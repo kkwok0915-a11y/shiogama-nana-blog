@@ -7,6 +7,7 @@ import { usePosts } from "./hooks";
 import { filterPosts, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
 import { useRead } from "./lib/read";
 import type { Post } from "./types";
+import UpgradeNotice from "./components/UpgradeNotice";
 
 const EMPTY: Post[] = [];
 const TITLE = "塩釜菜那 部落格 中文翻譯";
@@ -86,6 +87,7 @@ export default function App() {
 
   return (
     <>
+      <UpgradeNotice />
       <div className="wrap" id="top">
         <header className="site">
           <p className="kicker">僕が見たかった青空</p>

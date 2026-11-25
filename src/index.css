@@ -272,3 +272,23 @@ footer.site p { margin: 0.2rem 0; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* Dismissible upgrade banner (controlled by SHOW_UPGRADE_NOTICE). */
+.upgrade-notice {
+  position: relative; z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.6rem; padding: 0.5rem 3.25rem 0.5rem 1rem;
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+  color: var(--ink); border-bottom: 1px solid var(--line);
+  font-size: 0.88rem; line-height: 1.45; text-align: center;
+}
+.upgrade-notice p { margin: 0; max-width: 40rem; }
+.upgrade-dismiss {
+  position: absolute; right: 0.35rem; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border: none; border-radius: 50%; cursor: pointer;
+  background: transparent; color: var(--ink-soft); font-size: 0.95rem;
+  display: grid; place-items: center;
+}
+.upgrade-dismiss:hover { background: color-mix(in srgb, var(--accent) 16%, #fff); color: var(--ink); }
+.upgrade-dismiss:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+

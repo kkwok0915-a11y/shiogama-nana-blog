@@ -12,7 +12,7 @@ Vite + React + TypeScript, no trackers, system fonts only.
 
 ```
 src/data/posts.json          bundled fallback (generated; committed)
-src/lib/posts.ts             data layer: fetchPosts() -> Supabase public.blog_posts, fallback posts.json on error/4s timeout
+src/lib/posts.ts             data layer: fetchPosts() -> GET /api/posts, fallback posts.json on error/4s timeout
 src/hooks.ts                 usePosts()
 src/lib/read.ts              on-device 已讀 markers (localStorage only)
 src/App.tsx                  list / post view switch, search, ?p=<id> links
@@ -23,8 +23,9 @@ public/icon-*.png            192, 512, maskable, and apple-touch-icon
 scripts/posts-lib.mjs        md parser, photo copy, image size, fallback writer, upsert SQL builder
 scripts/gen-posts.mjs        all posts -> photos + posts.json + supabase/seed.sql (runs in `npm run build`)
 scripts/add-post.mjs         one post -> photos + posts.json + supabase/upserts/<id>.sql (printed)
-scripts/manifest.mjs         sha1/size manifest + base64 payloads of dist/ for MCP deploys
+scripts/pack-output.mjs      Build Output API v3 pack of dist/ + /api functions; writes deploy-manifest.json
 scripts/smoke.mjs            headless Chrome test (+ screenshots)
+api/                         server handlers for GET /api/posts and GET /api/settings (no keys in the browser)
 supabase/migrations/         schema + RLS
 ```
 
@@ -44,8 +45,16 @@ Table `public.blog_posts`: `id text pk`, `title_zh`, `title_jp`, `post_date date
 RLS on; `anon`/`authenticated` may only `select` rows where `published`; no client writes. Writes go through the
 Supabase connector's `execute_sql` (service role on the server side), never a key in this repo.
 
-Build-time env (Vercel project env + local `.env.local`, gitignored): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
-(publishable key only). Without them the site uses the bundled posts.json.
+The browser never talks to Supabase. A Vercel Function `GET /api/posts` (and `GET /api/posts?id=<id>`) reads
+`public.blog_posts` on the server using `SUPABASE_URL` and `SUPABASE_KEY` (publishable key, RLS read-only)
+set on the Vercel project (and in local gitignored `.env.local` for `npm run preview`). `GET /api/settings`
+reads `public.site_settings` (the upgrade notice) with a short cache (`s-maxage=60`). If the API fails, the
+site falls back to the bundled posts.json.
+
+The upgrade notice is toggled in the Table Editor, no redeploy needed:
+https://supabase.com/dashboard/project/jqsyymshdlrghyqtbcmp/editor/17677?schema=public
+Edit `notice_enabled` (true/false) and/or `notice_text` on the single row (`id = 1`) and save. The banner
+updates within about a minute (CDN cache).
 
 ## Adding a post (nightly)
 
@@ -61,11 +70,28 @@ npm run add-post -- <id>        # photos -> public/photos/<id>/, regenerates pos
 
 ## Deploy (user-Vercel MCP; no CLI token)
 
+Deploys use the Build Output API v3 (static files + `/api` functions). Always include the packed functions,
+even when only photos changed, or the new deployment will have no `/api` routes.
+
 ```bash
-npm run build && npm run manifest   # dist/ (+ static vercel.json for headers) + deploy-manifest.json + upload-payloads/*.b64
+cd /workspace/blog-site
+npm run build && npm run pack   # dist/ then .vercel/output/ + deploy-manifest.json + upload-payloads/*.b64
 ```
 
-For each manifest file: `upload_file` (`teamId`, `contentLength`=size, `xVercelDigest`=sha, `requestBody`=`$file:<b64>`),
-then `create_deployment` with `teamId`, `skipAutoDetectionConfirmation=1`, `requestBody.name=shiogama-nana-blog`,
-`requestBody.target=production`, `requestBody.projectSettings.framework=null`, `requestBody.files=[{file,sha,size}]`.
-The Supabase env vars are baked in at build time on the box, so set them in `.env.local` before `npm run build`.
+Do not put `VITE_SUPABASE_*` in `.env.local` when building — those would be baked into the JS bundle.
+Local `.env.local` should only have `SUPABASE_URL` and `SUPABASE_KEY` (server-side, same values as the
+Vercel project env). Never commit `.env` files.
+
+For each file in `deploy-manifest.json`: `upload_file` (`teamId=team_MpzOmojkBvxnWwiQW63WOOQH`,
+`contentLength`=size, `xVercelDigest`=sha, `requestBody`=`$file:<b64 path>`). Upload only new hashes if
+previous SHAs are already on Vercel, but still list every file in `create_deployment`.
+
+Then `create_deployment` with `teamId`, `skipAutoDetectionConfirmation=1`, `forceNew=1`,
+`requestBody.name=shiogama-nana-blog`, `requestBody.project=prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`,
+`requestBody.target=production`, `requestBody.projectSettings.framework=null`,
+`requestBody.files=[{file,sha,size}]` where `file` paths start with `.vercel/output/`
+(for example `.vercel/output/config.json`, `.vercel/output/static/index.html`,
+`.vercel/output/functions/api/posts.func/index.js`).
+
+Confirm https://shiogama-nana-blog.vercel.app/api/posts and `/api/settings` return JSON, and that
+the live JS assets contain neither `supabase.co` nor `sb_publishable`.
