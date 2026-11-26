@@ -497,3 +497,9 @@ select:focus-visible,
 .date-step:disabled { opacity: 0.4; cursor: default; }
 .date-note { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--ink-mute); }
 .skel-date-chip { width: 8.5rem; }
+
+/* View tabs on the left, date picker on the far right (wraps under the tabs on narrow phones, still right-aligned) */
+.toolbar-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 0.75rem; margin-top: 0.55rem; }
+.toolbar-row .view-tabs { margin-top: 0; }
+.toolbar-row .date-filter { margin-top: 0; margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; }
+.toolbar-row .date-note { text-align: right; }

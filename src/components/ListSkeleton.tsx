@@ -9,12 +9,14 @@ export default function ListSkeleton({ count }: { count: number }) {
       <div className="list-skeleton" aria-hidden="true">
         <div className="toolbar">
           <div className="skel skel-search" />
-          <div className="chip-row view-tabs">
-            <span className="skel skel-chip" />
-            <span className="skel skel-chip" />
-          </div>
-          <div className="date-filter">
-            <span className="skel skel-chip skel-date-chip" />
+          <div className="toolbar-row">
+            <div className="chip-row view-tabs">
+              <span className="skel skel-chip" />
+              <span className="skel skel-chip" />
+            </div>
+            <div className="date-filter">
+              <span className="skel skel-chip skel-date-chip" />
+            </div>
           </div>
         </div>
         <p className="result-count">

@@ -321,6 +321,7 @@ export default function App() {
                 <>
                   <div className="toolbar" role="search">
                     <SearchBar query={query} onQuery={setQuery} bare />
+                    <div className="toolbar-row">
                     <div className="chip-row view-tabs" role="tablist" aria-label="瀏覽方式">
                       <button
                         type="button"
@@ -358,6 +359,7 @@ export default function App() {
                     {view === "gallery" && (
                       <DatePicker dates={galleryDates} value={galleryDate} requested={date} onChange={selectDate} noun="照片" />
                     )}
+                    </div>
                   </div>
                   <p className="result-count" aria-live="polite">
                     {view === "instagram"
