@@ -119,7 +119,8 @@ byte-exact caption, date in JST, link to the original post). The tab is hidden w
 
 - Table `public.instagram_posts` (migration `20261126000000_create_instagram_posts.sql`, same RLS as `blog_posts`):
   `code text pk`, `taken_at timestamptz`, `caption`, `permalink`, `slides jsonb`
-  (`{type:'photo',src,width,height}` | `{type:'video',src:null}`), `photo_count`, `added_at`, `published`.
+  (`{type:'photo',src,width,height}` | `{type:'video',src:null}`; a photo slide that could not be archived is
+  `{type:'photo',src:null}` and the site shows a "not archived" card linking to Instagram), `photo_count`, `added_at`, `published`.
 - API (JSON, for the web and later iOS): `GET /api/instagram` (array, newest first) and `GET /api/instagram?code=<shortcode>` (one object, 404 if missing).
 - Photos are static files at `public/photos/ig/<code>/<n>.jpg` (+ `n.webp`, `n-sm.webp`), `n` = 1-based slide position.
   Instagram CDN URLs are signed and expire, so they are never stored in the repo, the database, or the API.
@@ -137,3 +138,6 @@ It downloads any missing photo with a plain GET into `/workspace/ig-archive/phot
 `public/photos/ig/`, makes WebP, merges `src/data/instagram.json`, and prints an idempotent upsert (also saved to
 `supabase/upserts/ig-batchN.sql`). Run the SQL with the Supabase connector on `jqsyymshdlrghyqtbcmp`, then redeploy
 (`npm run build && npm run pack`, which now packs the `instagram` function) and commit.
+
+Before ingesting, check the batch for the same CDN image appearing in more than one post (a scrape can pick up a
+stale carousel image); `md5sum /workspace/ig-archive/photos/*/*.jpg | sort | uniq -w32 -d` finds byte-identical photos.

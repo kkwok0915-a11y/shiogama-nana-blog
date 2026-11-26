@@ -79,10 +79,10 @@ export default function InstagramView({ post, prev, next, onBack, onOpen }: Prop
       <div className="ig-carousel" aria-roledescription="carousel" aria-label="貼文照片">
         <div className="ig-track" ref={track}>
           {post.slides.map((s, i) => {
-            if (s.type === "video") {
+            if (s.type === "video" || s.type === "missing") {
               return (
                 <div className="ig-slide ig-video" key={i} aria-roledescription="slide" aria-label={`${i + 1} / ${count}`}>
-                  <p>這一張是影片，無法存檔。</p>
+                  <p>{s.type === "video" ? "這一張是影片，無法存檔。" : "這一張未能存檔。"}</p>
                   <a className="pill" href={post.permalink} target="_blank" rel="noopener noreferrer">
                     在 Instagram 觀看 ↗
                   </a>

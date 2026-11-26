@@ -13,7 +13,8 @@ const CODE_RE = /^[A-Za-z0-9_-]{5,40}$/;
 
 export type IgSlide =
   | { type: "photo"; src: string; width: number | null; height: number | null }
-  | { type: "video"; src: null };
+  | { type: "video"; src: null }
+  | { type: "missing"; src: null }; // a photo slide we could not archive
 
 export interface IgRow {
   code: string;
@@ -62,6 +63,7 @@ function cleanSlides(v: unknown): IgSlide[] {
     if (s && s.type === "video") out.push({ type: "video", src: null });
     else if (s && s.type === "photo" && typeof s.src === "string" && SAFE_SRC.test(s.src))
       out.push({ type: "photo", src: s.src, width: s.width ?? null, height: s.height ?? null });
+    else if (s && s.type === "photo" && s.src == null) out.push({ type: "missing", src: null });
   }
   return out;
 }
