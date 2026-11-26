@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BackToTop from "./components/BackToTop";
 import ListSkeleton from "./components/ListSkeleton";
-import MonthNav from "./components/MonthNav";
-import PhotoGallery, { type GallerySource } from "./components/PhotoGallery";
+import DatePicker from "./components/DatePicker";
+import PhotoGallery, { galleryItems, type GallerySource } from "./components/PhotoGallery";
+import { dateFromLocation, nearestDate, uniqueDates } from "./lib/dates";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
@@ -27,7 +28,18 @@ function gallerySourceFromLocation(loc: Location = window.location): GallerySour
   const v = new URLSearchParams(loc.search).get("src");
   return v === "blog" || v === "ig" ? v : "all";
 }
-const galleryPath = (src: GallerySource) => (src === "all" ? "/?tab=gallery" : `/?tab=gallery&src=${src}`);
+/** URL for a list view; ?date=YYYY-MM-DD (文章 and 相簿) and &src= (相簿) survive reload and Back. */
+function listPath(view: ListView, src: GallerySource, date: string | null): string {
+  if (view === "instagram") return IG_LIST_PATH;
+  const q = new URLSearchParams();
+  if (view === "gallery") {
+    q.set("tab", "gallery");
+    if (src !== "all") q.set("src", src);
+  }
+  if (date) q.set("date", date);
+  const qs = q.toString();
+  return qs ? `/?${qs}` : "/";
+}
 function viewFromLocation(): ListView {
   if (igTabFromLocation() || igCodeFromLocation()) return "instagram";
   if (galleryTabFromLocation()) return "gallery";
@@ -41,6 +53,7 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ListView>(viewFromLocation);
   const [gallerySource, setGallerySource] = useState<GallerySource>(gallerySourceFromLocation);
+  const [date, setDate] = useState<string | null>(dateFromLocation);
   const ig = useInstagram();
   const [igCode, setIgCode] = useState<string | null>(() => igCodeFromLocation());
   const igVisible = useMemo(() => filterIg(ig.posts, query), [ig.posts, query]);
@@ -50,7 +63,32 @@ export default function App() {
   const listScroll = useRef(0);
 
   const visible = useMemo(() => filterPosts(posts, query), [posts, query]);
-  const months = useMemo(() => groupByMonth(visible), [visible]);
+  // 文章: the picked date snaps to the nearest date that has a post.
+  const listDates = useMemo(() => uniqueDates(visible.map((p) => p.post_date)), [visible]);
+  const listDate = nearestDate(listDates, date);
+  const listShown = useMemo(() => (listDate ? visible.filter((p) => p.post_date === listDate) : visible), [visible, listDate]);
+  const months = useMemo(() => groupByMonth(listShown), [listShown]);
+  // 相簿: blog + Instagram photos, filtered by source, then by date (snapped to the nearest date with photos).
+  const effSource: GallerySource = ig.posts.length ? gallerySource : "blog";
+  const galleryAll = useMemo(() => galleryItems(visible, igVisible), [visible, igVisible]);
+  const gallerySrcItems = useMemo(
+    () => (effSource === "all" ? galleryAll : galleryAll.filter((i) => i.kind === effSource)),
+    [galleryAll, effSource],
+  );
+  const galleryDates = useMemo(() => uniqueDates(gallerySrcItems.map((i) => i.post_date)), [gallerySrcItems]);
+  const galleryDate = nearestDate(galleryDates, date);
+  const galleryShown = useMemo(
+    () => (galleryDate ? gallerySrcItems.filter((i) => i.post_date === galleryDate) : gallerySrcItems),
+    [gallerySrcItems, galleryDate],
+  );
+  const galleryCounts = useMemo(() => {
+    const onDate = galleryDate ? galleryAll.filter((i) => i.post_date === galleryDate) : galleryAll;
+    return {
+      all: onDate.length,
+      blog: onDate.filter((i) => i.kind === "blog").length,
+      ig: onDate.filter((i) => i.kind === "ig").length,
+    };
+  }, [galleryAll, galleryDate]);
   const idx = activeId ? posts.findIndex((p) => p.id === activeId) : -1;
   const active = idx >= 0 ? posts[idx] : null;
 
@@ -61,6 +99,7 @@ export default function App() {
       if (!postIdFromLocation()) {
         setView(viewFromLocation());
         setGallerySource(gallerySourceFromLocation());
+        setDate(dateFromLocation());
       }
     };
     window.addEventListener("popstate", sync);
@@ -96,24 +135,32 @@ export default function App() {
     }
   }, []);
 
+  const replaceUrl = (want: string) => {
+    if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
+  };
+
   const selectView = useCallback(
     (v: ListView) => {
       setView(v);
-      const want = v === "instagram" ? IG_LIST_PATH : v === "gallery" ? galleryPath(gallerySource) : "/";
-      if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
+      replaceUrl(listPath(v, gallerySource, date));
     },
-    [gallerySource],
+    [gallerySource, date],
   );
 
-  const selectGallerySource = useCallback((src: GallerySource) => {
-    setGallerySource(src);
-    const want = galleryPath(src);
-    if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
-  }, []);
+  const selectGallerySource = useCallback(
+    (src: GallerySource) => {
+      setGallerySource(src);
+      replaceUrl(listPath("gallery", src, date));
+    },
+    [date],
+  );
 
-  const igPhotoCount = useMemo(
-    () => igVisible.reduce((n, p) => n + p.slides.filter((s) => s.type === "photo").length, 0),
-    [igVisible],
+  const selectDate = useCallback(
+    (d: string | null) => {
+      setDate(d);
+      replaceUrl(listPath(view, gallerySource, d));
+    },
+    [view, gallerySource],
   );
 
   useEffect(() => {
@@ -305,7 +352,12 @@ export default function App() {
                         </button>
                       )}
                     </div>
-                    {view === "list" && <MonthNav months={months} />}
+                    {view === "list" && (
+                      <DatePicker dates={listDates} value={listDate} requested={date} onChange={selectDate} noun="文章" />
+                    )}
+                    {view === "gallery" && (
+                      <DatePicker dates={galleryDates} value={galleryDate} requested={date} onChange={selectDate} noun="照片" />
+                    )}
                   </div>
                   <p className="result-count" aria-live="polite">
                     {view === "instagram"
@@ -313,29 +365,27 @@ export default function App() {
                         ? `找到 ${igVisible.length} 則貼文`
                         : `共 ${igVisible.length} 則 Instagram 貼文`
                       : view === "gallery"
-                      ? (() => {
-                          const blogN = visible.reduce((n, p) => n + p.photos.length, 0);
-                          const igN = ig.posts.length ? igPhotoCount : 0;
-                          const n = gallerySource === "blog" ? blogN : gallerySource === "ig" ? igN : blogN + igN;
-                          return filtered ? `找到 ${n} 張照片` : `共 ${n} 張照片`;
-                        })()
-                      : filtered
-                        ? `找到 ${visible.length} 篇文章`
-                        : `共 ${visible.length} 篇文章`}
+                      ? filtered || galleryDate
+                        ? `找到 ${galleryShown.length} 張照片`
+                        : `共 ${galleryShown.length} 張照片`
+                      : filtered || listDate
+                        ? `找到 ${listShown.length} 篇文章`
+                        : `共 ${listShown.length} 篇文章`}
                     <span className="sort-note">・依發文日期由新到舊</span>
                   </p>
                   {view === "instagram" ? (
                     <InstagramGrid posts={igVisible} onOpen={openIg} />
                   ) : view === "gallery" ? (
                     <PhotoGallery
-                      posts={visible}
-                      igPosts={igVisible}
-                      source={ig.posts.length ? gallerySource : "blog"}
+                      items={galleryShown}
+                      counts={galleryCounts}
+                      showSourceFilter={ig.posts.length > 0}
+                      source={effSource}
                       onSource={selectGallerySource}
                       onOpenPost={open}
                       onOpenIg={openIg}
                     />
-                  ) : visible.length ? (
+                  ) : listShown.length ? (
                     months.map((m) => (
                       <section key={m.key} className="month-section" aria-labelledby={`month-${m.key}`}>
                         <h2 className="month-heading" id={`month-${m.key}`}>
@@ -344,7 +394,7 @@ export default function App() {
                         </h2>
                         <ul className="list">
                           {m.items.map((p) => (
-                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} priority={visible.indexOf(p) < 3} />
+                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} priority={listShown.indexOf(p) < 3} />
                           ))}
                         </ul>
                       </section>

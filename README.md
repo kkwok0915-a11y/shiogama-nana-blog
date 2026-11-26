@@ -7,7 +7,7 @@ Vite + React + TypeScript, system fonts only. No advertising or cookie trackers;
 - Vercel project `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`), team `team_MpzOmojkBvxnWwiQW63WOOQH`
 - Videos for all members live on a separate site: https://bokuao-videos.vercel.app
 - Shareable post links use `?p=<id>` (for example https://shiogama-nana-blog.vercel.app/?p=21671). A post shows a NEW badge for 7 days after it is added, and a 已讀 marker is stored only on the visitor's device.
-- The list has a search box (title, translated body, and Japanese title; with a clear button), a month jump list (`2026年11月 (n)`), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
+- The list has a search box (title, translated body, and Japanese title; with a clear button), a date picker (`?date=YYYY-MM-DD`; shows that day, snapping to the nearest date with content, with ‹ › to step between dates and 全部 to clear), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
 - The post view keeps a「閱讀官方原文」link to the official Japanese post.
 - Share links (`/?p=<id>`) and the site root include Open Graph / Twitter meta tags (title, Traditional Chinese excerpt, first photo). A server function injects the tags into `index.html` because crawlers do not run JavaScript.
 - The 回到頂部 button sits above the iOS Safari bottom toolbar (`safe-area-inset-bottom + 80px`) so the first tap on iPhone activates it.
@@ -119,7 +119,7 @@ byte-exact caption, date in JST, link to the original post). The tab is hidden w
 
 The 相簿 tab (`/?tab=gallery`) mixes blog photos and every archived Instagram photo slide, newest first by post date
 (JST for Instagram; blog first on the same day), with a 全部 / Blog / Instagram filter kept in the URL
-(`&src=blog` or `&src=ig`). Instagram tiles carry an `IG` badge in the 全部 view; in the photo viewer they offer
+(`&src=blog` or `&src=ig`), plus the same date picker (`&date=YYYY-MM-DD`). Instagram tiles carry an `IG` badge in the 全部 view; in the photo viewer they offer
 查看貼文 (opens `/?ig=<code>`) and an `Instagram ↗` permalink. Blog photos keep 查看文章.
 
 - Table `public.instagram_posts` (migration `20261126000000_create_instagram_posts.sql`, same RLS as `blog_posts`):

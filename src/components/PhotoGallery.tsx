@@ -1,20 +1,21 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { groupByMonth } from "../lib/posts";
 import type { IgPost } from "../lib/instagram";
 import type { PhotoBlock, Post } from "../types";
 import Lightbox from "./Lightbox";
 import Photo from "./Photo";
-import MonthNav from "./MonthNav";
 
 export type GallerySource = "all" | "blog" | "ig";
 
-type Item =
+export type GalleryItem =
   | { kind: "blog"; key: string; photo: PhotoBlock; post: Post; post_date: string | null; label: string }
   | { kind: "ig"; key: string; photo: PhotoBlock; ig: IgPost; post_date: string | null; label: string };
 
 interface Props {
-  posts: Post[];
-  igPosts: IgPost[];
+  /** Items to show (already filtered by source and date). */
+  items: GalleryItem[];
+  counts: Record<GallerySource, number>;
+  showSourceFilter: boolean;
   source: GallerySource;
   onSource: (s: GallerySource) => void;
   onOpenPost: (p: Post) => void;
@@ -24,8 +25,8 @@ interface Props {
 /** YYYY-MM-DD (JST) from an IgPost date label "2026.11.20 21:05 JST". */
 const igDay = (p: IgPost) => p.dateLabel.slice(0, 10).replace(/\./g, "-");
 
-export function galleryItems(posts: Post[], igPosts: IgPost[]): Item[] {
-  const blog: Item[] = posts.flatMap((post) =>
+export function galleryItems(posts: Post[], igPosts: IgPost[]): GalleryItem[] {
+  const blog: GalleryItem[] = posts.flatMap((post) =>
     post.photos.map((photo) => ({
       kind: "blog" as const,
       key: `b-${post.id}-${photo.src}`,
@@ -35,7 +36,7 @@ export function galleryItems(posts: Post[], igPosts: IgPost[]): Item[] {
       label: `${post.dateLabel} ${post.title_zh} 的照片`,
     })),
   );
-  const ig: Item[] = igPosts.flatMap((p) =>
+  const ig: GalleryItem[] = igPosts.flatMap((p) =>
     p.slides.flatMap((s, i) =>
       s.type === "photo"
         ? [
@@ -61,19 +62,15 @@ const SOURCES: { id: GallerySource; label: string }[] = [
   { id: "ig", label: "Instagram" },
 ];
 
-export default function PhotoGallery({ posts, igPosts, source, onSource, onOpenPost, onOpenIg }: Props) {
-  const all = useMemo(() => galleryItems(posts, igPosts), [posts, igPosts]);
-  const counts = useMemo(
-    () => ({ all: all.length, blog: all.filter((i) => i.kind === "blog").length, ig: all.filter((i) => i.kind === "ig").length }),
-    [all],
-  );
-  const items = useMemo(() => (source === "all" ? all : all.filter((i) => i.kind === source)), [all, source]);
+export default function PhotoGallery({ items, counts, showSourceFilter, source, onSource, onOpenPost, onOpenIg }: Props) {
   const months = useMemo(() => groupByMonth(items), [items]);
   const [lb, setLb] = useState<number | null>(null);
   const photos = useMemo(() => items.map((it) => it.photo), [items]);
   const current = lb !== null ? items[lb] : null;
+  // Close the viewer if the list underneath changes (source or date filter).
+  useEffect(() => setLb(null), [items]);
 
-  const filterBar = igPosts.length > 0 && (
+  const filterBar = showSourceFilter && (
     <div className="chip-row gallery-filter" role="group" aria-label="照片來源">
       {SOURCES.map((s) => (
         <button
@@ -107,7 +104,6 @@ export default function PhotoGallery({ posts, igPosts, source, onSource, onOpenP
   return (
     <>
       {filterBar}
-      <MonthNav months={months} prefix="gallery-month" />
       {months.map((m) => (
         <section key={m.key} className="month-section" aria-labelledby={`gallery-month-${m.key}`}>
           <h2 className="month-heading" id={`gallery-month-${m.key}`}>

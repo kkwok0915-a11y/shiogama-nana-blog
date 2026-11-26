@@ -466,3 +466,34 @@ select:focus-visible,
   .ig-tile { border-radius: 6px; }
   .ig-tile-date { font-size: 0.65rem; padding: 0.9rem 0.3rem 0.2rem; }
 }
+
+/* Date picker (replaces the month chip row in the 文章 list and the 相簿 gallery) */
+.date-filter { margin-top: 0.55rem; }
+.date-picker { display: flex; align-items: center; gap: 0.4rem; flex-wrap: nowrap; }
+.date-field {
+  position: relative; display: inline-flex; align-items: center; gap: 0.45rem;
+  min-height: 44px; padding: 0 0.85rem; border: 1px solid var(--sky-2); border-radius: 999px;
+  background: #fff; color: var(--ink-soft); cursor: pointer; font-size: 0.9rem;
+}
+.date-field:hover, .date-field:focus-within { border-color: var(--accent); color: var(--accent); }
+.date-field svg { width: 17px; height: 17px; flex: none; }
+.date-field input {
+  font: inherit; font-size: 16px; color: var(--ink); border: none; background: transparent;
+  padding: 0; min-height: 42px; width: 7.4rem; cursor: pointer; outline: none;
+}
+.date-field input::-webkit-calendar-picker-indicator { display: none; }
+.date-field input::-webkit-date-and-time-value { text-align: left; }
+/* With no date chosen, show a label instead of the browser's "yyyy/mm/dd" mask; the input still takes the tap. */
+.date-field:not(.has-value) input { position: absolute; inset: 0; width: 100%; min-width: 0; opacity: 0; }
+.date-placeholder { font-weight: 500; }
+.date-field.has-value { border-color: var(--accent); }
+.date-step, .date-clear {
+  font: inherit; font-size: 0.9rem; min-height: 44px; cursor: pointer;
+  border: 1px solid var(--sky-2); background: #fff; color: var(--ink-soft); border-radius: 999px;
+}
+.date-step { width: 44px; font-size: 1.15rem; line-height: 1; }
+.date-clear { padding: 0 0.85rem; }
+.date-step:hover:not(:disabled), .date-clear:hover { border-color: var(--accent); color: var(--accent); }
+.date-step:disabled { opacity: 0.4; cursor: default; }
+.date-note { margin: 0.4rem 0 0; font-size: 0.82rem; color: var(--ink-mute); }
+.skel-date-chip { width: 8.5rem; }

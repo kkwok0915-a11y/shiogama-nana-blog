@@ -13,9 +13,9 @@ export default function ListSkeleton({ count }: { count: number }) {
             <span className="skel skel-chip" />
             <span className="skel skel-chip" />
           </div>
-          <nav className="months">
-            <span className="skel skel-chip" />
-          </nav>
+          <div className="date-filter">
+            <span className="skel skel-chip skel-date-chip" />
+          </div>
         </div>
         <p className="result-count">
           <span className="skel skel-count" />
