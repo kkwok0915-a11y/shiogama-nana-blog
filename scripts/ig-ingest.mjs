@@ -126,6 +126,9 @@ writeFileSync(FALLBACK, JSON.stringify({ posts }, null, 2) + "\n");
 // WebP companions (same optimizer as the blog photos; skips files already done).
 spawnSync("python3", [join(ROOT, "scripts", "optimize-photos.py")], { stdio: "inherit" });
 
+// Send new/changed photos to the Vercel Blob store (skipped quietly when no BLOB_READ_WRITE_TOKEN is set).
+spawnSync("node", [join(ROOT, "scripts", "blob-upload.mjs"), "--if-configured"], { stdio: "inherit" });
+
 const sql = rows.length
   ? `insert into public.instagram_posts (code, taken_at, caption, permalink, slides, photo_count, published)
 values

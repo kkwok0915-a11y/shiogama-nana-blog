@@ -166,6 +166,15 @@ mkdirSync(join(out, "static"), { recursive: true });
 cpSync(dist, join(out, "static"), { recursive: true });
 try { rmSync(join(out, "static", "vercel.json")); } catch {}
 
+// Photos live in the public Vercel Blob store (README, "Photos"). With PHOTOS_BASE_URL set, the deploy
+// carries no photo files and /photos/* is proxied to the store. Unset keeps the old behaviour (photos in the deploy).
+const photosBase = (process.env.PHOTOS_BASE_URL ?? "").replace(/\/+$/, "");
+if (photosBase && !/^https:\/\/[a-z0-9.-]+$/i.test(photosBase)) {
+  console.error("PHOTOS_BASE_URL must be an https origin, e.g. https://<id>.public.blob.vercel-storage.com");
+  process.exit(1);
+}
+if (photosBase) rmSync(join(out, "static", "photos"), { recursive: true, force: true });
+
 const vcConfig = JSON.stringify(
   { runtime: "nodejs22.x", handler: "index.js", launcherType: "Nodejs", shouldAddHelpers: true },
   null,
@@ -218,6 +227,7 @@ const routes = [
   { src: "^/assets/(.*)$", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, continue: true },
   { src: "^/photos/(.*)$", headers: { "Cache-Control": "public, max-age=31536000, immutable" }, continue: true },
   { handle: "filesystem" },
+  ...(photosBase ? [{ src: "^/photos/(.*)$", dest: `${photosBase}/photos/$1` }] : []),
   { src: "^/api(?:/.*)?$", status: 404 },
   { src: "^/(.*)$", dest: "/index.html" },
 ];

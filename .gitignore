@@ -11,3 +11,5 @@ supabase/.secret*
 supabase/upserts/
 
 .vercel/
+.vercel
+.env*

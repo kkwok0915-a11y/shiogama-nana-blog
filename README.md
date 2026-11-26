@@ -67,6 +67,26 @@ https://supabase.com/dashboard/project/jqsyymshdlrghyqtbcmp/editor/17677?schema=
 Edit `notice_enabled` (true/false) and/or `notice_text` on the single row (`id = 1`) and save. The banner
 updates on the next page load.
 
+## Photos (Vercel Blob)
+
+Photos live in a public Vercel Blob store, not in git or in the deploy. Store `shiogama-nana-photos`
+(`store_oulym35M6PqZGo1d`, region `hnd1`, team `team_MpzOmojkBvxnWwiQW63WOOQH`). Paths are unchanged:
+`/photos/<id>/<n>.webp` on the site is `photos/<id>/<n>.webp` in the store, so the database, the app and the
+link previews need no changes. `/photos/*` is proxied to the store by a route that `npm run pack` adds when
+`PHOTOS_BASE_URL` is set; without it the deploy carries the photos as before.
+
+- `npm install --save-dev @vercel/blob` once, then put `BLOB_READ_WRITE_TOKEN=...` (a read-write token for the store, from the
+  Vercel dashboard) in `.env.local`. Never commit it.
+- `node scripts/blob-upload.mjs --dry-run` counts what would be uploaded; without the flag it uploads, skipping files already in
+  the store with the same size (`--force` re-uploads, `--webp-only` leaves the JPEGs out).
+- `add-post` and `ig-ingest` run the upload at the end when the token is present (`--if-configured`).
+- Deploy with `PHOTOS_BASE_URL=https://<store-id>.public.blob.vercel-storage.com npm run pack` (the upload prints the exact origin).
+- Replacing a photo under the same path: files are cached for a year, so give the replacement a new filename.
+- The JPEGs stay in the store for now because link previews (`og:image`) use the `.jpg` path.
+
+Local `public/photos/` is only a staging copy that the scripts write to. Once the store is verified it is removed from git
+(`git rm -r --cached public/photos`, and add `public/photos/` to `.gitignore`).
+
 ## Adding a post (nightly)
 
 ```bash
@@ -76,7 +96,7 @@ npm run add-post -- <id>        # photos -> public/photos/<id>/, regenerates pos
 
 1. Run the SQL printed between `-----BEGIN SQL-----` / `-----END SQL-----` (also saved at `supabase/upserts/<id>.sql`)
    with the Supabase connector `execute_sql` on project `jqsyymshdlrghyqtbcmp` (never the bokuao-videos project). It is an idempotent upsert on `id`.
-2. Text-only post: done (the site reads Supabase at runtime). Post with photos: redeploy (below) so the images exist.
+2. Text-only post: done (the site reads Supabase at runtime). Post with photos: the script uploads them to Blob when a token is set (see Photos), so no redeploy; without a token, redeploy (below) so the images exist.
 3. `git add -A && git commit -m "Add post <id>" && git push`.
 
 ## Deploy (user-Vercel MCP; no CLI token)
