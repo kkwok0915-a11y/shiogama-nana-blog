@@ -111,3 +111,29 @@ the live JS assets contain neither `supabase.co` nor `sb_publishable`. With a cr
 (`facebookexternalhit` or `Twitterbot`) and with a normal browser UA, `/?p=<id>` HTML should include
 `og:title`, `og:description` (a short Traditional Chinese excerpt), `og:image` (the first photo) and
 `og:url` for that post; the root URL should include the site-wide tags.
+
+## Instagram archive
+
+`/?tab=ig` shows a newest-first grid of her Instagram posts; `/?ig=<shortcode>` opens one post (carousel,
+byte-exact caption, date in JST, link to the original post). The tab is hidden while the archive is empty.
+
+- Table `public.instagram_posts` (migration `20261126000000_create_instagram_posts.sql`, same RLS as `blog_posts`):
+  `code text pk`, `taken_at timestamptz`, `caption`, `permalink`, `slides jsonb`
+  (`{type:'photo',src,width,height}` | `{type:'video',src:null}`), `photo_count`, `added_at`, `published`.
+- API (JSON, for the web and later iOS): `GET /api/instagram` (array, newest first) and `GET /api/instagram?code=<shortcode>` (one object, 404 if missing).
+- Photos are static files at `public/photos/ig/<code>/<n>.jpg` (+ `n.webp`, `n-sm.webp`), `n` = 1-based slide position.
+  Instagram CDN URLs are signed and expire, so they are never stored in the repo, the database, or the API.
+- Bundled fallback: `src/data/instagram.json`.
+
+### Adding a batch (or a nightly new post)
+
+```bash
+# batch JSON: [{code, taken_at, caption, slides:[{type:"image"|"video", url?}]}] (url = signed CDN url, used once)
+node /workspace/ig-archive/ingest.mjs /workspace/ig-archive/batches/batchN.json
+# == node scripts/ig-ingest.mjs <batch.json> --photos /workspace/ig-archive/photos
+```
+
+It downloads any missing photo with a plain GET into `/workspace/ig-archive/photos/<code>/<n>.jpg`, copies it into
+`public/photos/ig/`, makes WebP, merges `src/data/instagram.json`, and prints an idempotent upsert (also saved to
+`supabase/upserts/ig-batchN.sql`). Run the SQL with the Supabase connector on `jqsyymshdlrghyqtbcmp`, then redeploy
+(`npm run build && npm run pack`, which now packs the `instagram` function) and commit.

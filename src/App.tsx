@@ -12,18 +12,26 @@ import { bundledPosts, filterPosts, groupByMonth, historyHasPostState, postIdFro
 import { useRead } from "./lib/read";
 import type { Post } from "./types";
 import UpgradeNotice from "./components/UpgradeNotice";
+import InstagramGrid from "./components/InstagramGrid";
+import InstagramView from "./components/InstagramView";
+import { IG_LIST_PATH, filterIg, igCodeFromLocation, igPath, igTabFromLocation, useInstagram, type IgPost } from "./lib/instagram";
 
 const EMPTY: Post[] = [];
 const TITLE = "塩釜菜那 部落格 中文翻譯";
 
-type ListView = "list" | "gallery";
+type ListView = "list" | "gallery" | "instagram";
 
 export default function App() {
   const state = usePosts();
   const posts = state.status === "ready" ? state.posts : EMPTY;
   const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ListView>("list");
+  const [view, setView] = useState<ListView>(() => (igTabFromLocation() || igCodeFromLocation() ? "instagram" : "list"));
+  const ig = useInstagram();
+  const [igCode, setIgCode] = useState<string | null>(() => igCodeFromLocation());
+  const igVisible = useMemo(() => filterIg(ig.posts, query), [ig.posts, query]);
+  const igIdx = igCode ? ig.posts.findIndex((p) => p.code === igCode) : -1;
+  const igActive = igIdx >= 0 ? ig.posts[igIdx] : null;
   const [activeId, setActiveId] = useState<string | null>(null);
   const listScroll = useRef(0);
 
@@ -33,12 +41,59 @@ export default function App() {
   const active = idx >= 0 ? posts[idx] : null;
 
   useEffect(() => {
+    const sync = () => {
+      const code = igCodeFromLocation();
+      setIgCode(code);
+      if (code || igTabFromLocation()) setView("instagram");
+    };
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (igCode) window.scrollTo(0, 0);
+    else if (view === "instagram") window.scrollTo(0, listScroll.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [igCode]);
+
+  const openIg = useCallback((p: IgPost) => {
+    if (!igCodeFromLocation()) listScroll.current = window.scrollY;
+    setIgCode(p.code);
+    history.pushState({ ig: p.code }, "", igPath(p.code));
+  }, []);
+
+  const switchIg = useCallback((p: IgPost) => {
+    setIgCode(p.code);
+    const hasState = Boolean(history.state && typeof history.state === "object" && "ig" in history.state);
+    history.replaceState(hasState ? { ig: p.code } : null, "", igPath(p.code));
+  }, []);
+
+  const backIg = useCallback(() => {
+    setIgCode(null);
+    setView("instagram");
+    if (history.state && typeof history.state === "object" && "ig" in history.state) history.back();
+    else history.replaceState(null, "", IG_LIST_PATH);
+  }, []);
+
+  const selectView = useCallback((v: ListView) => {
+    setView(v);
+    const want = v === "instagram" ? IG_LIST_PATH : "/";
+    if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
+  }, []);
+
+  useEffect(() => {
+    if (!igCode) return;
+    document.title = igActive ? `Instagram ${igActive.dateLabel}｜${TITLE}` : `Instagram｜${TITLE}`;
+  }, [igCode, igActive]);
+
+  useEffect(() => {
+    if (igCode) return;
     document.title = active
       ? `${active.title_zh}｜${TITLE}`
       : state.status === "ready" && activeId
         ? `找不到這篇文章｜${TITLE}`
         : TITLE;
-  }, [active, activeId, state.status]);
+  }, [active, activeId, state.status, igCode]);
 
   useEffect(() => {
     if (state.status !== "ready") return;
@@ -111,7 +166,8 @@ export default function App() {
               href="/"
               onClick={(e) => {
                 e.preventDefault();
-                if (activeId) back();
+                if (igCode) backIg();
+                else if (activeId) back();
               }}
             >
               {TITLE}
@@ -121,8 +177,27 @@ export default function App() {
         </header>
 
         <main id="main" aria-busy={state.status === "loading"}>
-        {state.status === "loading" && <ListSkeleton count={bundledPosts().length} />}
-        {state.status === "error" && (
+        {igCode && (igActive ? (
+          <InstagramView
+            key={igActive.code}
+            post={igActive}
+            next={igIdx > 0 ? ig.posts[igIdx - 1] : null}
+            prev={igIdx < ig.posts.length - 1 ? ig.posts[igIdx + 1] : null}
+            onBack={backIg}
+            onOpen={switchIg}
+          />
+        ) : ig.loaded ? (
+          <StatusPage
+            title="找不到這則貼文"
+            message="這個連結沒有對應的 Instagram 貼文，可能尚未存檔或網址有誤。"
+            actionLabel="返回 Instagram"
+            onAction={backIg}
+          />
+        ) : (
+          <p className="status" role="status">載入中…</p>
+        ))}
+        {!igCode && state.status === "loading" && <ListSkeleton count={bundledPosts().length} />}
+        {!igCode && state.status === "error" && (
           <StatusPage
             title="無法載入文章"
             message="請檢查網路連線後再試一次。"
@@ -132,7 +207,7 @@ export default function App() {
           />
         )}
 
-        {state.status === "ready" && (
+        {!igCode && state.status === "ready" && (
           <>
             {state.warning && (
               <p className="status warn" role="status">
@@ -170,7 +245,7 @@ export default function App() {
                         role="tab"
                         className={"chip" + (view === "list" ? " current" : "")}
                         aria-selected={view === "list"}
-                        onClick={() => setView("list")}
+                        onClick={() => selectView("list")}
                       >
                         文章
                       </button>
@@ -179,15 +254,30 @@ export default function App() {
                         role="tab"
                         className={"chip" + (view === "gallery" ? " current" : "")}
                         aria-selected={view === "gallery"}
-                        onClick={() => setView("gallery")}
+                        onClick={() => selectView("gallery")}
                       >
                         相簿
                       </button>
+                      {ig.posts.length > 0 && (
+                        <button
+                          type="button"
+                          role="tab"
+                          className={"chip" + (view === "instagram" ? " current" : "")}
+                          aria-selected={view === "instagram"}
+                          onClick={() => selectView("instagram")}
+                        >
+                          Instagram
+                        </button>
+                      )}
                     </div>
                     {view === "list" && <MonthNav months={months} />}
                   </div>
                   <p className="result-count" aria-live="polite">
-                    {view === "gallery"
+                    {view === "instagram"
+                      ? filtered
+                        ? `找到 ${igVisible.length} 則貼文`
+                        : `共 ${igVisible.length} 則 Instagram 貼文`
+                      : view === "gallery"
                       ? filtered
                         ? `找到 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
                         : `共 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
@@ -196,7 +286,9 @@ export default function App() {
                         : `共 ${visible.length} 篇文章`}
                     <span className="sort-note">・依發文日期由新到舊</span>
                   </p>
-                  {view === "gallery" ? (
+                  {view === "instagram" ? (
+                    <InstagramGrid posts={igVisible} onOpen={openIg} />
+                  ) : view === "gallery" ? (
                     <PhotoGallery posts={visible} onOpenPost={open} />
                   ) : visible.length ? (
                     months.map((m) => (

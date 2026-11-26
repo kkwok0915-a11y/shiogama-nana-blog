@@ -12,7 +12,7 @@
     "preview": "vite preview --port 4174 --strictPort",
     "manifest": "npm run pack",
     "test:smoke": "node scripts/smoke.mjs",
-    "pack": "node scripts/pack-output.mjs posts settings og"
+    "pack": "node scripts/pack-output.mjs posts settings og instagram"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

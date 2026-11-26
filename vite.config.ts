@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { localApiPlugin } from "./api/dev-middleware.mjs";
 import { handleOg } from "./api/og.mjs";
+import { handleInstagram } from "./api/instagram.mjs";
 import { handlePosts } from "./api/posts.mjs";
 import { handleSettings } from "./api/settings.mjs";
 
@@ -41,7 +42,7 @@ export default defineConfig(({ mode }) => {
       react(),
       ogHtmlPlugin(handleOg, serverEnv, "p"),
       localApiPlugin(
-        { "/api/posts": handlePosts, "/api/settings": handleSettings, "/api/og": handleOg },
+        { "/api/posts": handlePosts, "/api/instagram": handleInstagram, "/api/settings": handleSettings, "/api/og": handleOg },
         serverEnv,
       ),
     ],

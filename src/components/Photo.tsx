@@ -11,7 +11,7 @@ interface Props {
 
 /** Use a resized WebP when present, and keep the original file as the fallback. */
 export function photoSrc(src: string, size: "sm" | "full" = "full"): string {
-  const m = src.match(/^(\/photos\/\d+\/\d+)\.(jpe?g|png|webp)$/i);
+  const m = src.match(/^(\/photos\/(?:\d+|ig\/[A-Za-z0-9_-]+)\/\d+)\.(jpe?g|png|webp)$/i);
   if (!m) return src;
   return size === "sm" ? `${m[1]}-sm.webp` : `${m[1]}.webp`;
 }
