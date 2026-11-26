@@ -13,3 +13,4 @@ supabase/upserts/
 .vercel/
 .vercel
 .env*
+public/photos/
