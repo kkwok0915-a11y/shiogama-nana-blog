@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { groupByMonth } from "../lib/posts";
 import type { IgPost } from "../lib/instagram";
+import { igDay } from "../lib/feed";
 import type { PhotoBlock, Post } from "../types";
 import Lightbox from "./Lightbox";
 import Photo from "./Photo";
 
-export type GallerySource = "all" | "blog" | "ig";
+import type { Source } from "./SourceFilter";
+
+export type GallerySource = Source;
 
 export type GalleryItem =
   | { kind: "blog"; key: string; photo: PhotoBlock; post: Post; post_date: string | null; label: string }
@@ -14,16 +17,11 @@ export type GalleryItem =
 interface Props {
   /** Items to show (already filtered by source and date). */
   items: GalleryItem[];
-  counts: Record<GallerySource, number>;
-  showSourceFilter: boolean;
   source: GallerySource;
-  onSource: (s: GallerySource) => void;
   onOpenPost: (p: Post) => void;
   onOpenIg: (p: IgPost) => void;
 }
 
-/** YYYY-MM-DD (JST) from an IgPost date label "2026.11.20 21:05 JST". */
-const igDay = (p: IgPost) => p.dateLabel.slice(0, 10).replace(/\./g, "-");
 
 export function galleryItems(posts: Post[], igPosts: IgPost[]): GalleryItem[] {
   const blog: GalleryItem[] = posts.flatMap((post) =>
@@ -56,13 +54,7 @@ export function galleryItems(posts: Post[], igPosts: IgPost[]): GalleryItem[] {
   return [...blog, ...ig].sort((a, b) => (b.post_date ?? "").localeCompare(a.post_date ?? ""));
 }
 
-const SOURCES: { id: GallerySource; label: string }[] = [
-  { id: "all", label: "全部" },
-  { id: "blog", label: "Blog" },
-  { id: "ig", label: "Instagram" },
-];
-
-export default function PhotoGallery({ items, counts, showSourceFilter, source, onSource, onOpenPost, onOpenIg }: Props) {
+export default function PhotoGallery({ items, source, onOpenPost, onOpenIg }: Props) {
   const months = useMemo(() => groupByMonth(items), [items]);
   const [lb, setLb] = useState<number | null>(null);
   const photos = useMemo(() => items.map((it) => it.photo), [items]);
@@ -70,40 +62,16 @@ export default function PhotoGallery({ items, counts, showSourceFilter, source, 
   // Close the viewer if the list underneath changes (source or date filter).
   useEffect(() => setLb(null), [items]);
 
-  const filterBar = showSourceFilter && (
-    <div className="chip-row gallery-filter" role="group" aria-label="照片來源">
-      {SOURCES.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          className={"chip" + (source === s.id ? " current" : "")}
-          aria-pressed={source === s.id}
-          onClick={() => {
-            setLb(null);
-            onSource(s.id);
-          }}
-        >
-          {s.label}
-          <span className="count">{counts[s.id]}</span>
-        </button>
-      ))}
-    </div>
-  );
-
   if (!items.length) {
     return (
-      <>
-        {filterBar}
-        <div className="empty" role="status">
-          <p>這個範圍還沒有照片。</p>
-        </div>
-      </>
+      <div className="empty" role="status">
+        <p>這個範圍還沒有照片。</p>
+      </div>
     );
   }
 
   return (
     <>
-      {filterBar}
       {months.map((m) => (
         <section key={m.key} className="month-section" aria-labelledby={`gallery-month-${m.key}`}>
           <h2 className="month-heading" id={`gallery-month-${m.key}`}>

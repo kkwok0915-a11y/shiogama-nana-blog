@@ -40,7 +40,10 @@ export default function PostCard({ post, onOpen, read, priority }: { post: Post;
           {post.photo_count > 1 && <span className="badge-count" aria-label={`${post.photo_count} 張照片`}>📷 {post.photo_count}</span>}
         </span>
         <span className="card-body">
-          <span className="card-date">{post.dateLabel}</span>
+          <span className="card-meta">
+            <span className="card-date">{post.dateLabel}</span>
+            <span className="src-badge src-blog">Blog</span>
+          </span>
           <span className="card-title">{post.title_zh}</span>
           {post.title_jp && <span className="card-jp" lang="ja">{post.title_jp}</span>}
           {post.excerpt && <span className="card-excerpt">{post.excerpt}</span>}

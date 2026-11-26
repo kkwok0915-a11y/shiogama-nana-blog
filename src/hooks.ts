@@ -8,8 +8,10 @@ function initialState(): PostsState {
   return posts.length ? { status: "ready", posts, source: "json" } : { status: "loading" };
 }
 
-export function usePosts(): PostsState & { retry: () => void } {
+/** `settled` turns true once /api/posts has answered (or failed), so a deep link can wait for fresh data. */
+export function usePosts(): PostsState & { retry: () => void; settled: boolean } {
   const [state, setState] = useState<PostsState>(initialState);
+  const [settled, setSettled] = useState(false);
   const [tick, setTick] = useState(0);
   const retry = useCallback(() => setTick((n) => n + 1), []);
 
@@ -18,11 +20,12 @@ export function usePosts(): PostsState & { retry: () => void } {
     setState((prev) => (prev.status === "ready" && prev.posts.length ? prev : { status: "loading" }));
     fetchPosts()
       .then((r) => alive && setState({ status: "ready", ...r }))
-      .catch((e: unknown) => alive && setState({ status: "error", message: e instanceof Error ? e.message : String(e) }));
+      .catch((e: unknown) => alive && setState({ status: "error", message: e instanceof Error ? e.message : String(e) }))
+      .finally(() => alive && setSettled(true));
     return () => {
       alive = false;
     };
   }, [tick]);
 
-  return { ...state, retry };
+  return { ...state, retry, settled };
 }

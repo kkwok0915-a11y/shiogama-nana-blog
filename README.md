@@ -7,7 +7,8 @@ Vite + React + TypeScript, system fonts only. No advertising or cookie trackers;
 - Vercel project `shiogama-nana-blog` (`prj_QdKqzkmsYJOO8JpIl8Ci45DrvnCN`), team `team_MpzOmojkBvxnWwiQW63WOOQH`
 - Videos for all members live on a separate site: https://bokuao-videos.vercel.app
 - Shareable post links use `?p=<id>` (for example https://shiogama-nana-blog.vercel.app/?p=21671). A post shows a NEW badge for 7 days after it is added, and a 已讀 marker is stored only on the visitor's device.
-- The list has a search box (title, translated body, and Japanese title; with a clear button), a date picker (`?date=YYYY-MM-DD`; shows that day, snapping to the nearest date with content, with ‹ › to step between dates and 全部 to clear), and a 相簿 grid of every post photo (tap opens the existing photo viewer, with a link back to the post).
+- Two tabs: **動態** (`/`) is one newest-first timeline of blog posts and Instagram posts (by post date, JST), and **相簿** (`/?tab=gallery`) is every photo. Both share a search box, a 全部 / Blog / Instagram segmented filter with counts (`?src=blog|ig`) and, on the far right, a date picker (`?date=YYYY-MM-DD`; shows that day, snapping to the nearest date with content, with ‹ › to step between dates and 全部 to clear). Blog and Instagram cards use the same card geometry and date format, with a small Blog / IG badge. Back from a post returns to the feed with its filter, date and scroll position. Old links keep working: `/?tab=ig` opens 動態 with `src=ig`; `?p=<id>` and `?ig=<code>` open directly.
+- Loading: shimmer skeletons shaped like the toolbar, cards, grid and post view; each photo's box is reserved from its width/height and shows a shimmer (or, for full-size photos, the blurred `-sm.webp`) until it fades in. `prefers-reduced-motion` turns the animations off.
 - The post view keeps a「閱讀官方原文」link to the official Japanese post.
 - Share links (`/?p=<id>`) and the site root include Open Graph / Twitter meta tags (title, Traditional Chinese excerpt, first photo). A server function injects the tags into `index.html` because crawlers do not run JavaScript.
 - The 回到頂部 button sits above the iOS Safari bottom toolbar (`safe-area-inset-bottom + 80px`) so the first tap on iPhone activates it.
@@ -114,8 +115,9 @@ the live JS assets contain neither `supabase.co` nor `sb_publishable`. With a cr
 
 ## Instagram archive
 
-`/?tab=ig` shows a newest-first grid of her Instagram posts; `/?ig=<shortcode>` opens one post (carousel,
-byte-exact caption, date in JST, link to the original post). The tab is hidden while the archive is empty.
+Instagram posts appear in the 動態 feed (`/?src=ig` for Instagram only; the old `/?tab=ig` redirects there);
+`/?ig=<shortcode>` opens one post (carousel, byte-exact caption, date in JST, link to the original post).
+The source filter is hidden while the archive is empty.
 
 The 相簿 tab (`/?tab=gallery`) mixes blog photos and every archived Instagram photo slide, newest first by post date
 (JST for Instagram; blog first on the same day), with a 全部 / Blog / Instagram filter kept in the URL

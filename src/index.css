@@ -398,7 +398,6 @@ select:focus-visible,
   font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; border-radius: 999px; padding: 0.08rem 0.45rem;
   background: rgba(20, 40, 70, 0.6); color: #fff;
 }
-.gallery-filter { margin: 0 0 0.75rem; flex-wrap: wrap; }
 
 @media (max-width: 600px) {
   .gallery { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.4rem; }
@@ -503,3 +502,64 @@ select:focus-visible,
 .toolbar-row .view-tabs { margin-top: 0; }
 .toolbar-row .date-filter { margin-top: 0; margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; }
 .toolbar-row .date-note { text-align: right; }
+
+/* 動態 / 相簿 filter row: segmented source filter on the left, date picker on the far right */
+.filter-row { flex-wrap: wrap; }
+.segmented {
+  display: inline-flex; align-items: center; gap: 2px; padding: 2px; min-height: 44px; box-sizing: border-box;
+  border: 1px solid var(--sky-2); border-radius: 999px; background: #fff;
+}
+.seg {
+  font: inherit; font-size: 0.88rem; cursor: pointer; border: none; background: transparent; color: var(--ink-soft);
+  border-radius: 999px; min-height: 38px; padding: 0 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;
+  transition: background 0.15s, color 0.15s;
+}
+.seg:hover { color: var(--accent); }
+.seg.current { background: var(--accent); color: #fff; }
+.seg .count {
+  min-width: 1.5em; padding: 0 0.4em; border-radius: 999px; background: var(--sky-1); color: var(--ink-mute);
+  font-size: 0.75rem; text-align: center;
+}
+.seg.current .count { background: rgba(255, 255, 255, 0.25); color: #fff; }
+.seg:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+.seg-short { display: none; }
+@media (max-width: 600px) {
+  .seg { padding: 0 0.55rem; font-size: 0.84rem; }
+  .seg-long { display: none; }
+  .seg-short { display: inline; }
+}
+
+/* Feed cards: blog and Instagram share one geometry */
+.card-meta { display: flex; align-items: center; gap: 0.45rem; }
+.src-badge {
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.4;
+  padding: 0.05rem 0.45rem; border-radius: 999px;
+}
+.src-blog { background: var(--sky-1); color: var(--accent); }
+.src-ig { background: linear-gradient(135deg, #f58529, #dd2a7b 55%, #8134af); color: #fff; }
+.card-title-ig { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Photo loading: shimmer in the reserved box, or a blurred small preview for full-size photos; then fade in */
+img.ph-shimmer {
+  background: linear-gradient(90deg, var(--sky-1) 20%, var(--sky-2) 50%, var(--sky-1) 80%);
+  background-size: 200% 100%;
+  animation: skel 1.4s ease-in-out infinite;
+}
+img.ph-preview { background-size: cover; background-position: center; filter: blur(10px); }
+img.ph-in { animation: ph-in 0.45s ease-out both; }
+@keyframes ph-in { from { opacity: 0; filter: blur(10px); } to { opacity: 1; filter: none; } }
+.card.read .thumb img.ph-in { animation-name: ph-in-read; }
+@keyframes ph-in-read { from { opacity: 0; filter: blur(10px); } to { opacity: 0.78; filter: none; } }
+
+/* Skeleton shapes for the toolbar, feed, grid and post view */
+.skel-seg { width: 12.5rem; height: 44px; border-radius: 999px; }
+.gallery-btn.skel { cursor: default; }
+.thumb.skel { border-radius: 0; }
+.skel-pill { width: 8rem; height: 44px; border-radius: 999px; }
+.skel-center { margin-left: auto; margin-right: auto; }
+.skel-heading { height: 1.6em; width: 70%; margin-top: 0.6rem; }
+.skel-photo { width: min(100%, 26rem); aspect-ratio: 3 / 4; margin: 1.25rem auto; border-radius: 12px; }
+.skel-line { height: 1em; width: 100%; margin: 0.8rem 0; }
+.skel-line.short { width: 60%; }
+.post-skeleton .post-head { display: grid; gap: 0.4rem; }
+@media (max-width: 600px) { .skel-seg { width: 10.5rem; } }

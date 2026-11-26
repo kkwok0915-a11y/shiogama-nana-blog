@@ -1,50 +1,52 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BackToTop from "./components/BackToTop";
-import ListSkeleton from "./components/ListSkeleton";
 import DatePicker from "./components/DatePicker";
-import PhotoGallery, { galleryItems, type GallerySource } from "./components/PhotoGallery";
-import { dateFromLocation, nearestDate, uniqueDates } from "./lib/dates";
+import IgCard from "./components/IgCard";
+import PhotoGallery, { galleryItems } from "./components/PhotoGallery";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
+import { FeedSkeleton, PostSkeleton } from "./components/Skeletons";
+import SourceFilter, { type Source } from "./components/SourceFilter";
 import StatusPage from "./components/StatusPage";
+import UpgradeNotice from "./components/UpgradeNotice";
+import InstagramView from "./components/InstagramView";
 import { usePosts } from "./hooks";
-import { bundledPosts, filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
+import { dateFromLocation, nearestDate, uniqueDates } from "./lib/dates";
+import { feedItems } from "./lib/feed";
+import { filterIg, igCodeFromLocation, igPath, igTabFromLocation, useInstagram, type IgPost } from "./lib/instagram";
+import { filterPosts, groupByMonth, historyHasPostState, postIdFromLocation, postPath } from "./lib/posts";
 import { useRead } from "./lib/read";
 import type { Post } from "./types";
-import UpgradeNotice from "./components/UpgradeNotice";
-import InstagramGrid from "./components/InstagramGrid";
-import InstagramView from "./components/InstagramView";
-import { IG_LIST_PATH, filterIg, igCodeFromLocation, igPath, igTabFromLocation, useInstagram, type IgPost } from "./lib/instagram";
 
 const EMPTY: Post[] = [];
 const TITLE = "塩釜菜那 部落格 中文翻譯";
 
-type ListView = "list" | "gallery" | "instagram";
+/** 動態 = blog + Instagram timeline; 相簿 = every photo. */
+type ListView = "feed" | "gallery";
 
-/** ?tab=gallery[&src=blog|ig] keeps the 相簿 tab and its source filter in the URL. */
 const galleryTabFromLocation = (loc: Location = window.location) => new URLSearchParams(loc.search).get("tab") === "gallery";
-function gallerySourceFromLocation(loc: Location = window.location): GallerySource {
+/** ?src=blog|ig; the old Instagram tab link (?tab=ig) means 動態 filtered to Instagram. */
+function sourceFromLocation(loc: Location = window.location): Source {
   const v = new URLSearchParams(loc.search).get("src");
-  return v === "blog" || v === "ig" ? v : "all";
+  if (v === "blog" || v === "ig") return v;
+  return igTabFromLocation(loc) ? "ig" : "all";
 }
-/** URL for a list view; ?date=YYYY-MM-DD (文章 and 相簿) and &src= (相簿) survive reload and Back. */
-function listPath(view: ListView, src: GallerySource, date: string | null): string {
-  if (view === "instagram") return IG_LIST_PATH;
+/** URL for a list view: 動態 is "/", 相簿 is ?tab=gallery; &src= and &date= survive reload and Back. */
+function listPath(view: ListView, src: Source, date: string | null): string {
   const q = new URLSearchParams();
-  if (view === "gallery") {
-    q.set("tab", "gallery");
-    if (src !== "all") q.set("src", src);
-  }
+  if (view === "gallery") q.set("tab", "gallery");
+  if (src !== "all") q.set("src", src);
   if (date) q.set("date", date);
   const qs = q.toString();
   return qs ? `/?${qs}` : "/";
 }
-function viewFromLocation(): ListView {
-  if (igTabFromLocation() || igCodeFromLocation()) return "instagram";
-  if (galleryTabFromLocation()) return "gallery";
-  return "list";
-}
+const viewFromLocation = (): ListView => (galleryTabFromLocation() ? "gallery" : "feed");
+const countBy = <T extends { kind: "blog" | "ig" }>(list: T[]): Record<Source, number> => ({
+  all: list.length,
+  blog: list.filter((i) => i.kind === "blog").length,
+  ig: list.filter((i) => i.kind === "ig").length,
+});
 
 export default function App() {
   const state = usePosts();
@@ -52,7 +54,7 @@ export default function App() {
   const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
   const [view, setView] = useState<ListView>(viewFromLocation);
-  const [gallerySource, setGallerySource] = useState<GallerySource>(gallerySourceFromLocation);
+  const [source, setSource] = useState<Source>(sourceFromLocation);
   const [date, setDate] = useState<string | null>(dateFromLocation);
   const ig = useInstagram();
   const [igCode, setIgCode] = useState<string | null>(() => igCodeFromLocation());
@@ -63,42 +65,48 @@ export default function App() {
   const listScroll = useRef(0);
 
   const visible = useMemo(() => filterPosts(posts, query), [posts, query]);
-  // 文章: the picked date snaps to the nearest date that has a post.
-  const listDates = useMemo(() => uniqueDates(visible.map((p) => p.post_date)), [visible]);
-  const listDate = nearestDate(listDates, date);
-  const listShown = useMemo(() => (listDate ? visible.filter((p) => p.post_date === listDate) : visible), [visible, listDate]);
-  const months = useMemo(() => groupByMonth(listShown), [listShown]);
-  // 相簿: blog + Instagram photos, filtered by source, then by date (snapped to the nearest date with photos).
-  const effSource: GallerySource = ig.posts.length ? gallerySource : "blog";
+  const effSource: Source = ig.posts.length ? source : "blog";
+
+  // 動態: blog + Instagram posts, filtered by source, then by date (snapped to the nearest date with posts).
+  const feedAll = useMemo(() => feedItems(visible, igVisible), [visible, igVisible]);
+  const feedSrc = useMemo(() => (effSource === "all" ? feedAll : feedAll.filter((i) => i.kind === effSource)), [feedAll, effSource]);
+  const feedDates = useMemo(() => uniqueDates(feedSrc.map((i) => i.post_date)), [feedSrc]);
+  const feedDate = nearestDate(feedDates, date);
+  const feedShown = useMemo(() => (feedDate ? feedSrc.filter((i) => i.post_date === feedDate) : feedSrc), [feedSrc, feedDate]);
+  const feedCounts = useMemo(() => countBy(feedDate ? feedAll.filter((i) => i.post_date === feedDate) : feedAll), [feedAll, feedDate]);
+  const months = useMemo(() => groupByMonth(feedShown), [feedShown]);
+
+  // 相簿: blog + Instagram photos, same filters.
   const galleryAll = useMemo(() => galleryItems(visible, igVisible), [visible, igVisible]);
-  const gallerySrcItems = useMemo(
+  const gallerySrc = useMemo(
     () => (effSource === "all" ? galleryAll : galleryAll.filter((i) => i.kind === effSource)),
     [galleryAll, effSource],
   );
-  const galleryDates = useMemo(() => uniqueDates(gallerySrcItems.map((i) => i.post_date)), [gallerySrcItems]);
+  const galleryDates = useMemo(() => uniqueDates(gallerySrc.map((i) => i.post_date)), [gallerySrc]);
   const galleryDate = nearestDate(galleryDates, date);
   const galleryShown = useMemo(
-    () => (galleryDate ? gallerySrcItems.filter((i) => i.post_date === galleryDate) : gallerySrcItems),
-    [gallerySrcItems, galleryDate],
+    () => (galleryDate ? gallerySrc.filter((i) => i.post_date === galleryDate) : gallerySrc),
+    [gallerySrc, galleryDate],
   );
-  const galleryCounts = useMemo(() => {
-    const onDate = galleryDate ? galleryAll.filter((i) => i.post_date === galleryDate) : galleryAll;
-    return {
-      all: onDate.length,
-      blog: onDate.filter((i) => i.kind === "blog").length,
-      ig: onDate.filter((i) => i.kind === "ig").length,
-    };
-  }, [galleryAll, galleryDate]);
+  const galleryCounts = useMemo(
+    () => countBy(galleryDate ? galleryAll.filter((i) => i.post_date === galleryDate) : galleryAll),
+    [galleryAll, galleryDate],
+  );
+
   const idx = activeId ? posts.findIndex((p) => p.id === activeId) : -1;
   const active = idx >= 0 ? posts[idx] : null;
 
+  // Old Instagram tab links (?tab=ig) now open 動態 filtered to Instagram.
+  useEffect(() => {
+    if (igTabFromLocation() && !igCodeFromLocation()) history.replaceState(null, "", listPath("feed", "ig", dateFromLocation()));
+  }, []);
+
   useEffect(() => {
     const sync = () => {
-      const code = igCodeFromLocation();
-      setIgCode(code);
-      if (!postIdFromLocation()) {
+      setIgCode(igCodeFromLocation());
+      if (!postIdFromLocation() && !igCodeFromLocation()) {
         setView(viewFromLocation());
-        setGallerySource(gallerySourceFromLocation());
+        setSource(sourceFromLocation());
         setDate(dateFromLocation());
       }
     };
@@ -108,12 +116,15 @@ export default function App() {
 
   useLayoutEffect(() => {
     if (igCode) window.scrollTo(0, 0);
-    else if (view === "instagram" || view === "gallery") window.scrollTo(0, listScroll.current);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    else window.scrollTo(0, listScroll.current);
   }, [igCode]);
 
+  // Keep the current list URL in a ref so Back fallbacks (no in-app history) return to the same filters.
+  const listUrl = useRef("/");
+  listUrl.current = listPath(view, source, date);
+
   const openIg = useCallback((p: IgPost) => {
-    if (!igCodeFromLocation()) listScroll.current = window.scrollY;
+    if (!igCodeFromLocation() && !postIdFromLocation()) listScroll.current = window.scrollY;
     setIgCode(p.code);
     history.pushState({ ig: p.code }, "", igPath(p.code));
   }, []);
@@ -126,13 +137,9 @@ export default function App() {
 
   const backIg = useCallback(() => {
     setIgCode(null);
-    // With an in-app history entry, Back returns to wherever the post was opened from (Instagram tab or 相簿);
-    // popstate then restores the view from the URL.
+    // With an in-app history entry, Back returns to the feed or 相簿 it was opened from; popstate restores the filters.
     if (history.state && typeof history.state === "object" && "ig" in history.state) history.back();
-    else {
-      setView("instagram");
-      history.replaceState(null, "", IG_LIST_PATH);
-    }
+    else history.replaceState(null, "", listUrl.current);
   }, []);
 
   const replaceUrl = (want: string) => {
@@ -142,25 +149,25 @@ export default function App() {
   const selectView = useCallback(
     (v: ListView) => {
       setView(v);
-      replaceUrl(listPath(v, gallerySource, date));
+      replaceUrl(listPath(v, source, date));
     },
-    [gallerySource, date],
+    [source, date],
   );
 
-  const selectGallerySource = useCallback(
-    (src: GallerySource) => {
-      setGallerySource(src);
-      replaceUrl(listPath("gallery", src, date));
+  const selectSource = useCallback(
+    (src: Source) => {
+      setSource(src);
+      replaceUrl(listPath(view, src, date));
     },
-    [date],
+    [view, date],
   );
 
   const selectDate = useCallback(
     (d: string | null) => {
       setDate(d);
-      replaceUrl(listPath(view, gallerySource, d));
+      replaceUrl(listPath(view, source, d));
     },
-    [view, gallerySource],
+    [view, source],
   );
 
   useEffect(() => {
@@ -172,10 +179,10 @@ export default function App() {
     if (igCode) return;
     document.title = active
       ? `${active.title_zh}｜${TITLE}`
-      : state.status === "ready" && activeId
+      : state.status === "ready" && activeId && state.settled
         ? `找不到這篇文章｜${TITLE}`
         : TITLE;
-  }, [active, activeId, state.status, igCode]);
+  }, [active, activeId, state.status, state.settled, igCode]);
 
   useEffect(() => {
     if (state.status !== "ready") return;
@@ -206,7 +213,7 @@ export default function App() {
   }, [activeId, state.status]);
 
   const open = useCallback((p: Post) => {
-    if (!postIdFromLocation()) listScroll.current = window.scrollY;
+    if (!postIdFromLocation() && !igCodeFromLocation()) listScroll.current = window.scrollY;
     setActiveId(p.id);
     const path = postPath(p.id);
     if (postIdFromLocation() !== p.id || window.location.pathname + window.location.search !== path) {
@@ -227,12 +234,15 @@ export default function App() {
     setActiveId(null);
     if (postIdFromLocation()) {
       if (historyHasPostState()) history.back();
-      else history.replaceState(null, "", "/");
+      else history.replaceState(null, "", listUrl.current);
     }
   }, [activeId]);
 
   const latest = posts[0]?.dateLabel ?? "";
   const filtered = Boolean(query);
+  const isGallery = view === "gallery";
+  const shownCount = isGallery ? galleryShown.length : feedShown.length;
+  const unit = isGallery ? "張照片" : "則動態";
 
   return (
     <>
@@ -258,27 +268,28 @@ export default function App() {
           <p className="lede">塩釜菜那官方部落格「菜那のもぜか日記」的繁體中文翻譯，最新文章在最上面。</p>
         </header>
 
-        <main id="main" aria-busy={state.status === "loading"}>
-        {igCode && (igActive ? (
-          <InstagramView
-            key={igActive.code}
-            post={igActive}
-            next={igIdx > 0 ? ig.posts[igIdx - 1] : null}
-            prev={igIdx < ig.posts.length - 1 ? ig.posts[igIdx + 1] : null}
-            onBack={backIg}
-            onOpen={switchIg}
-          />
-        ) : ig.loaded ? (
-          <StatusPage
-            title="找不到這則貼文"
-            message="這個連結沒有對應的 Instagram 貼文，可能尚未存檔或網址有誤。"
-            actionLabel="返回 Instagram"
-            onAction={backIg}
-          />
-        ) : (
-          <p className="status" role="status">載入中…</p>
-        ))}
-        {!igCode && state.status === "loading" && <ListSkeleton count={bundledPosts().length} />}
+        <main id="main" aria-busy={state.status === "loading" || !state.settled}>
+        {igCode &&
+          (igActive ? (
+            <InstagramView
+              key={igActive.code}
+              post={igActive}
+              next={igIdx > 0 ? ig.posts[igIdx - 1] : null}
+              prev={igIdx < ig.posts.length - 1 ? ig.posts[igIdx + 1] : null}
+              onBack={backIg}
+              onOpen={switchIg}
+            />
+          ) : ig.loaded ? (
+            <StatusPage
+              title="找不到這則貼文"
+              message="這個連結沒有對應的 Instagram 貼文，可能尚未存檔或網址有誤。"
+              actionLabel="返回動態"
+              onAction={backIg}
+            />
+          ) : (
+            <PostSkeleton />
+          ))}
+        {!igCode && state.status === "loading" && (postIdFromLocation() ? <PostSkeleton /> : <FeedSkeleton view={view} />)}
         {!igCode && state.status === "error" && (
           <StatusPage
             title="無法載入文章"
@@ -299,14 +310,16 @@ export default function App() {
                 </button>
               </p>
             )}
-            {activeId && !active && (
+            {activeId && !active && (state.settled ? (
               <StatusPage
                 title="找不到這篇文章"
                 message="這個連結沒有對應的文章，可能已經下架或網址有誤。"
-                actionLabel="返回文章列表"
+                actionLabel="返回動態"
                 onAction={back}
               />
-            )}
+            ) : (
+              <PostSkeleton />
+            ))}
             {active ? (
               <PostView
                 key={active.id}
@@ -321,73 +334,51 @@ export default function App() {
                 <>
                   <div className="toolbar" role="search">
                     <SearchBar query={query} onQuery={setQuery} bare />
-                    <div className="toolbar-row">
                     <div className="chip-row view-tabs" role="tablist" aria-label="瀏覽方式">
                       <button
                         type="button"
                         role="tab"
-                        className={"chip" + (view === "list" ? " current" : "")}
-                        aria-selected={view === "list"}
-                        onClick={() => selectView("list")}
+                        className={"chip" + (view === "feed" ? " current" : "")}
+                        aria-selected={view === "feed"}
+                        onClick={() => selectView("feed")}
                       >
-                        文章
+                        動態
                       </button>
                       <button
                         type="button"
                         role="tab"
-                        className={"chip" + (view === "gallery" ? " current" : "")}
-                        aria-selected={view === "gallery"}
+                        className={"chip" + (isGallery ? " current" : "")}
+                        aria-selected={isGallery}
                         onClick={() => selectView("gallery")}
                       >
                         相簿
                       </button>
-                      {ig.posts.length > 0 && (
-                        <button
-                          type="button"
-                          role="tab"
-                          className={"chip" + (view === "instagram" ? " current" : "")}
-                          aria-selected={view === "instagram"}
-                          onClick={() => selectView("instagram")}
-                        >
-                          Instagram
-                        </button>
-                      )}
                     </div>
-                    {view === "list" && (
-                      <DatePicker dates={listDates} value={listDate} requested={date} onChange={selectDate} noun="文章" />
-                    )}
-                    {view === "gallery" && (
-                      <DatePicker dates={galleryDates} value={galleryDate} requested={date} onChange={selectDate} noun="照片" />
-                    )}
+                    <div className="toolbar-row filter-row">
+                      {ig.posts.length > 0 && (
+                        <SourceFilter
+                          source={effSource}
+                          counts={isGallery ? galleryCounts : feedCounts}
+                          onSource={selectSource}
+                          label={isGallery ? "照片來源" : "動態來源"}
+                        />
+                      )}
+                      <DatePicker
+                        dates={isGallery ? galleryDates : feedDates}
+                        value={isGallery ? galleryDate : feedDate}
+                        requested={date}
+                        onChange={selectDate}
+                        noun={isGallery ? "照片" : "動態"}
+                      />
                     </div>
                   </div>
                   <p className="result-count" aria-live="polite">
-                    {view === "instagram"
-                      ? filtered
-                        ? `找到 ${igVisible.length} 則貼文`
-                        : `共 ${igVisible.length} 則 Instagram 貼文`
-                      : view === "gallery"
-                      ? filtered || galleryDate
-                        ? `找到 ${galleryShown.length} 張照片`
-                        : `共 ${galleryShown.length} 張照片`
-                      : filtered || listDate
-                        ? `找到 ${listShown.length} 篇文章`
-                        : `共 ${listShown.length} 篇文章`}
+                    {filtered || (isGallery ? galleryDate : feedDate) ? `找到 ${shownCount} ${unit}` : `共 ${shownCount} ${unit}`}
                     <span className="sort-note">・依發文日期由新到舊</span>
                   </p>
-                  {view === "instagram" ? (
-                    <InstagramGrid posts={igVisible} onOpen={openIg} />
-                  ) : view === "gallery" ? (
-                    <PhotoGallery
-                      items={galleryShown}
-                      counts={galleryCounts}
-                      showSourceFilter={ig.posts.length > 0}
-                      source={effSource}
-                      onSource={selectGallerySource}
-                      onOpenPost={open}
-                      onOpenIg={openIg}
-                    />
-                  ) : listShown.length ? (
+                  {isGallery ? (
+                    <PhotoGallery items={galleryShown} source={effSource} onOpenPost={open} onOpenIg={openIg} />
+                  ) : feedShown.length ? (
                     months.map((m) => (
                       <section key={m.key} className="month-section" aria-labelledby={`month-${m.key}`}>
                         <h2 className="month-heading" id={`month-${m.key}`}>
@@ -395,15 +386,20 @@ export default function App() {
                           <span className="month-count">（{m.count}）</span>
                         </h2>
                         <ul className="list">
-                          {m.items.map((p) => (
-                            <PostCard key={p.id} post={p} onOpen={open} read={isRead(p)} priority={listShown.indexOf(p) < 3} />
-                          ))}
+                          {m.items.map((it) => {
+                            const priority = feedShown.indexOf(it) < 3;
+                            return it.kind === "blog" ? (
+                              <PostCard key={it.key} post={it.post} onOpen={open} read={isRead(it.post)} priority={priority} />
+                            ) : (
+                              <IgCard key={it.key} post={it.ig} onOpen={openIg} priority={priority} />
+                            );
+                          })}
                         </ul>
                       </section>
                     ))
                   ) : (
                     <div className="empty" role="status">
-                      <p>找不到符合的文章。</p>
+                      <p>找不到符合的動態。</p>
                       {filtered && (
                         <button type="button" className="empty-clear" onClick={() => setQuery("")}>
                           清除搜尋

@@ -63,7 +63,7 @@ export default function InstagramView({ post, prev, next, onBack, onOpen }: Prop
     <article className="post ig-post" aria-labelledby="ig-title">
       <div className="post-nav top">
         <button type="button" className="pill" onClick={onBack}>
-          ← 返回 Instagram
+          ← 返回動態
         </button>
         <a className="pill ghost" href={post.permalink} target="_blank" rel="noopener noreferrer">
           在 Instagram 開啟 ↗

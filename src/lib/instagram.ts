@@ -146,7 +146,8 @@ export function filterIg(list: IgPost[], query: string): IgPost[] {
 }
 
 export const igPath = (code: string) => `/?ig=${encodeURIComponent(code)}`;
-export const IG_LIST_PATH = "/?tab=ig";
+/** Old Instagram tab links (?tab=ig) now open 動態 filtered to Instagram. */
+export const IG_LIST_PATH = "/?src=ig";
 
 export function igCodeFromLocation(loc: Location = window.location): string | null {
   const c = new URLSearchParams(loc.search).get("ig");

@@ -108,7 +108,7 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
     <article className="post" aria-labelledby="post-title">
       <div className="post-nav top">
         <button type="button" className="pill" onClick={onBack}>
-          ← 返回文章列表
+          ← 返回動態
         </button>
         <button type="button" className="pill ghost copy-link" onClick={share}>
           複製連結
