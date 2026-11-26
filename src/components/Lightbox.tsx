@@ -8,9 +8,11 @@ interface Props {
   index: number | null;
   onIndex: (i: number | null) => void;
   action?: { label: string; onClick: () => void } | null;
+  /** Optional external link (e.g. the Instagram permalink), opened in a new tab. */
+  link?: { label: string; href: string } | null;
 }
 
-export default function Lightbox({ photos, index, onIndex, action }: Props) {
+export default function Lightbox({ photos, index, onIndex, action, link }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const indexRef = useRef(index);
   const photosRef = useRef(photos);
@@ -113,6 +115,11 @@ export default function Lightbox({ photos, index, onIndex, action }: Props) {
               <button type="button" className="lb-action" onClick={action.onClick}>
                 {action.label}
               </button>
+            )}
+            {link && (
+              <a className="lb-action lb-link" href={link.href} target="_blank" rel="noopener noreferrer">
+                {link.label}
+              </a>
             )}
             <button type="button" className="lb-btn lb-close" onClick={() => onIndex(null)} aria-label="關閉">
               ✕

@@ -1,41 +1,112 @@
 import { useMemo, useState } from "react";
 import { groupByMonth } from "../lib/posts";
+import type { IgPost } from "../lib/instagram";
 import type { PhotoBlock, Post } from "../types";
 import Lightbox from "./Lightbox";
 import Photo from "./Photo";
 import MonthNav from "./MonthNav";
 
-interface Item {
-  photo: PhotoBlock;
-  post: Post;
-  post_date: string | null;
-}
+export type GallerySource = "all" | "blog" | "ig";
+
+type Item =
+  | { kind: "blog"; key: string; photo: PhotoBlock; post: Post; post_date: string | null; label: string }
+  | { kind: "ig"; key: string; photo: PhotoBlock; ig: IgPost; post_date: string | null; label: string };
 
 interface Props {
   posts: Post[];
+  igPosts: IgPost[];
+  source: GallerySource;
+  onSource: (s: GallerySource) => void;
   onOpenPost: (p: Post) => void;
+  onOpenIg: (p: IgPost) => void;
 }
 
-export default function PhotoGallery({ posts, onOpenPost }: Props) {
-  const items = useMemo<Item[]>(
-    () => posts.flatMap((post) => post.photos.map((photo) => ({ photo, post, post_date: post.post_date }))),
-    [posts],
+/** YYYY-MM-DD (JST) from an IgPost date label "2026.11.20 21:05 JST". */
+const igDay = (p: IgPost) => p.dateLabel.slice(0, 10).replace(/\./g, "-");
+
+export function galleryItems(posts: Post[], igPosts: IgPost[]): Item[] {
+  const blog: Item[] = posts.flatMap((post) =>
+    post.photos.map((photo) => ({
+      kind: "blog" as const,
+      key: `b-${post.id}-${photo.src}`,
+      photo,
+      post,
+      post_date: post.post_date,
+      label: `${post.dateLabel} ${post.title_zh} 的照片`,
+    })),
   );
+  const ig: Item[] = igPosts.flatMap((p) =>
+    p.slides.flatMap((s, i) =>
+      s.type === "photo"
+        ? [
+            {
+              kind: "ig" as const,
+              key: `i-${p.code}-${i}`,
+              photo: { type: "photo" as const, src: s.src, alt: "", width: s.width, height: s.height },
+              ig: p,
+              post_date: igDay(p),
+              label: `Instagram ${p.dateLabel} 第 ${i + 1} 張照片`,
+            },
+          ]
+        : [],
+    ),
+  );
+  // Newest first by post date; on the same day, blog photos come before Instagram (stable sort).
+  return [...blog, ...ig].sort((a, b) => (b.post_date ?? "").localeCompare(a.post_date ?? ""));
+}
+
+const SOURCES: { id: GallerySource; label: string }[] = [
+  { id: "all", label: "全部" },
+  { id: "blog", label: "Blog" },
+  { id: "ig", label: "Instagram" },
+];
+
+export default function PhotoGallery({ posts, igPosts, source, onSource, onOpenPost, onOpenIg }: Props) {
+  const all = useMemo(() => galleryItems(posts, igPosts), [posts, igPosts]);
+  const counts = useMemo(
+    () => ({ all: all.length, blog: all.filter((i) => i.kind === "blog").length, ig: all.filter((i) => i.kind === "ig").length }),
+    [all],
+  );
+  const items = useMemo(() => (source === "all" ? all : all.filter((i) => i.kind === source)), [all, source]);
   const months = useMemo(() => groupByMonth(items), [items]);
   const [lb, setLb] = useState<number | null>(null);
-  const photos = items.map((it) => it.photo);
+  const photos = useMemo(() => items.map((it) => it.photo), [items]);
   const current = lb !== null ? items[lb] : null;
+
+  const filterBar = igPosts.length > 0 && (
+    <div className="chip-row gallery-filter" role="group" aria-label="照片來源">
+      {SOURCES.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          className={"chip" + (source === s.id ? " current" : "")}
+          aria-pressed={source === s.id}
+          onClick={() => {
+            setLb(null);
+            onSource(s.id);
+          }}
+        >
+          {s.label}
+          <span className="count">{counts[s.id]}</span>
+        </button>
+      ))}
+    </div>
+  );
 
   if (!items.length) {
     return (
-      <div className="empty" role="status">
-        <p>這個範圍還沒有照片。</p>
-      </div>
+      <>
+        {filterBar}
+        <div className="empty" role="status">
+          <p>這個範圍還沒有照片。</p>
+        </div>
+      </>
     );
   }
 
   return (
     <>
+      {filterBar}
       <MonthNav months={months} prefix="gallery-month" />
       {months.map((m) => (
         <section key={m.key} className="month-section" aria-labelledby={`gallery-month-${m.key}`}>
@@ -47,13 +118,8 @@ export default function PhotoGallery({ posts, onOpenPost }: Props) {
             {m.items.map((it) => {
               const idx = items.indexOf(it);
               return (
-                <li key={`${it.post.id}-${it.photo.src}`}>
-                  <button
-                    type="button"
-                    className="gallery-btn"
-                    onClick={() => setLb(idx)}
-                    aria-label={`${it.post.dateLabel} ${it.post.title_zh} 的照片`}
-                  >
+                <li key={it.key}>
+                  <button type="button" className="gallery-btn" onClick={() => setLb(idx)} aria-label={it.label}>
                     <Photo
                       src={it.photo.src}
                       alt={it.photo.alt ?? ""}
@@ -61,6 +127,11 @@ export default function PhotoGallery({ posts, onOpenPost }: Props) {
                       height={it.photo.height ?? undefined}
                       size="sm"
                     />
+                    {it.kind === "ig" && source !== "ig" && (
+                      <span className="badge-src" aria-hidden="true">
+                        IG
+                      </span>
+                    )}
                   </button>
                 </li>
               );
@@ -74,15 +145,24 @@ export default function PhotoGallery({ posts, onOpenPost }: Props) {
         onIndex={setLb}
         action={
           current
-            ? {
-                label: "查看文章",
-                onClick: () => {
-                  setLb(null);
-                  onOpenPost(current.post);
-                },
-              }
+            ? current.kind === "blog"
+              ? {
+                  label: "查看文章",
+                  onClick: () => {
+                    setLb(null);
+                    onOpenPost(current.post);
+                  },
+                }
+              : {
+                  label: "查看貼文",
+                  onClick: () => {
+                    setLb(null);
+                    onOpenIg(current.ig);
+                  },
+                }
             : null
         }
+        link={current?.kind === "ig" ? { label: "Instagram ↗", href: current.ig.permalink } : null}
       />
     </>
   );

@@ -391,6 +391,14 @@ select:focus-visible,
   background: #fff; color: #1c2838;
 }
 .lb-action:hover { background: var(--sky-1); }
+.lb-link { display: inline-flex; align-items: center; text-decoration: none; }
+.gallery-btn { position: relative; }
+.badge-src {
+  position: absolute; top: 0.4rem; right: 0.4rem; pointer-events: none;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; border-radius: 999px; padding: 0.08rem 0.45rem;
+  background: rgba(20, 40, 70, 0.6); color: #fff;
+}
+.gallery-filter { margin: 0 0 0.75rem; flex-wrap: wrap; }
 
 @media (max-width: 600px) {
   .gallery { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.4rem; }

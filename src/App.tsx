@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import BackToTop from "./components/BackToTop";
 import ListSkeleton from "./components/ListSkeleton";
 import MonthNav from "./components/MonthNav";
-import PhotoGallery from "./components/PhotoGallery";
+import PhotoGallery, { type GallerySource } from "./components/PhotoGallery";
 import PostCard from "./components/PostCard";
 import PostView from "./components/PostView";
 import SearchBar from "./components/SearchBar";
@@ -21,12 +21,26 @@ const TITLE = "塩釜菜那 部落格 中文翻譯";
 
 type ListView = "list" | "gallery" | "instagram";
 
+/** ?tab=gallery[&src=blog|ig] keeps the 相簿 tab and its source filter in the URL. */
+const galleryTabFromLocation = (loc: Location = window.location) => new URLSearchParams(loc.search).get("tab") === "gallery";
+function gallerySourceFromLocation(loc: Location = window.location): GallerySource {
+  const v = new URLSearchParams(loc.search).get("src");
+  return v === "blog" || v === "ig" ? v : "all";
+}
+const galleryPath = (src: GallerySource) => (src === "all" ? "/?tab=gallery" : `/?tab=gallery&src=${src}`);
+function viewFromLocation(): ListView {
+  if (igTabFromLocation() || igCodeFromLocation()) return "instagram";
+  if (galleryTabFromLocation()) return "gallery";
+  return "list";
+}
+
 export default function App() {
   const state = usePosts();
   const posts = state.status === "ready" ? state.posts : EMPTY;
   const { mark, isRead } = useRead();
   const [query, setQuery] = useState("");
-  const [view, setView] = useState<ListView>(() => (igTabFromLocation() || igCodeFromLocation() ? "instagram" : "list"));
+  const [view, setView] = useState<ListView>(viewFromLocation);
+  const [gallerySource, setGallerySource] = useState<GallerySource>(gallerySourceFromLocation);
   const ig = useInstagram();
   const [igCode, setIgCode] = useState<string | null>(() => igCodeFromLocation());
   const igVisible = useMemo(() => filterIg(ig.posts, query), [ig.posts, query]);
@@ -44,7 +58,10 @@ export default function App() {
     const sync = () => {
       const code = igCodeFromLocation();
       setIgCode(code);
-      if (code || igTabFromLocation()) setView("instagram");
+      if (!postIdFromLocation()) {
+        setView(viewFromLocation());
+        setGallerySource(gallerySourceFromLocation());
+      }
     };
     window.addEventListener("popstate", sync);
     return () => window.removeEventListener("popstate", sync);
@@ -52,7 +69,7 @@ export default function App() {
 
   useLayoutEffect(() => {
     if (igCode) window.scrollTo(0, 0);
-    else if (view === "instagram") window.scrollTo(0, listScroll.current);
+    else if (view === "instagram" || view === "gallery") window.scrollTo(0, listScroll.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [igCode]);
 
@@ -70,16 +87,34 @@ export default function App() {
 
   const backIg = useCallback(() => {
     setIgCode(null);
-    setView("instagram");
+    // With an in-app history entry, Back returns to wherever the post was opened from (Instagram tab or 相簿);
+    // popstate then restores the view from the URL.
     if (history.state && typeof history.state === "object" && "ig" in history.state) history.back();
-    else history.replaceState(null, "", IG_LIST_PATH);
+    else {
+      setView("instagram");
+      history.replaceState(null, "", IG_LIST_PATH);
+    }
   }, []);
 
-  const selectView = useCallback((v: ListView) => {
-    setView(v);
-    const want = v === "instagram" ? IG_LIST_PATH : "/";
+  const selectView = useCallback(
+    (v: ListView) => {
+      setView(v);
+      const want = v === "instagram" ? IG_LIST_PATH : v === "gallery" ? galleryPath(gallerySource) : "/";
+      if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
+    },
+    [gallerySource],
+  );
+
+  const selectGallerySource = useCallback((src: GallerySource) => {
+    setGallerySource(src);
+    const want = galleryPath(src);
     if (window.location.pathname + window.location.search !== want) history.replaceState(null, "", want);
   }, []);
+
+  const igPhotoCount = useMemo(
+    () => igVisible.reduce((n, p) => n + p.slides.filter((s) => s.type === "photo").length, 0),
+    [igVisible],
+  );
 
   useEffect(() => {
     if (!igCode) return;
@@ -278,9 +313,12 @@ export default function App() {
                         ? `找到 ${igVisible.length} 則貼文`
                         : `共 ${igVisible.length} 則 Instagram 貼文`
                       : view === "gallery"
-                      ? filtered
-                        ? `找到 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
-                        : `共 ${visible.reduce((n, p) => n + p.photos.length, 0)} 張照片`
+                      ? (() => {
+                          const blogN = visible.reduce((n, p) => n + p.photos.length, 0);
+                          const igN = ig.posts.length ? igPhotoCount : 0;
+                          const n = gallerySource === "blog" ? blogN : gallerySource === "ig" ? igN : blogN + igN;
+                          return filtered ? `找到 ${n} 張照片` : `共 ${n} 張照片`;
+                        })()
                       : filtered
                         ? `找到 ${visible.length} 篇文章`
                         : `共 ${visible.length} 篇文章`}
@@ -289,7 +327,14 @@ export default function App() {
                   {view === "instagram" ? (
                     <InstagramGrid posts={igVisible} onOpen={openIg} />
                   ) : view === "gallery" ? (
-                    <PhotoGallery posts={visible} onOpenPost={open} />
+                    <PhotoGallery
+                      posts={visible}
+                      igPosts={igVisible}
+                      source={ig.posts.length ? gallerySource : "blog"}
+                      onSource={selectGallerySource}
+                      onOpenPost={open}
+                      onOpenIg={openIg}
+                    />
                   ) : visible.length ? (
                     months.map((m) => (
                       <section key={m.key} className="month-section" aria-labelledby={`month-${m.key}`}>

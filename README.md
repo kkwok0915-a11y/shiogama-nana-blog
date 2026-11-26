@@ -117,6 +117,11 @@ the live JS assets contain neither `supabase.co` nor `sb_publishable`. With a cr
 `/?tab=ig` shows a newest-first grid of her Instagram posts; `/?ig=<shortcode>` opens one post (carousel,
 byte-exact caption, date in JST, link to the original post). The tab is hidden while the archive is empty.
 
+The 相簿 tab (`/?tab=gallery`) mixes blog photos and every archived Instagram photo slide, newest first by post date
+(JST for Instagram; blog first on the same day), with a 全部 / Blog / Instagram filter kept in the URL
+(`&src=blog` or `&src=ig`). Instagram tiles carry an `IG` badge in the 全部 view; in the photo viewer they offer
+查看貼文 (opens `/?ig=<code>`) and an `Instagram ↗` permalink. Blog photos keep 查看文章.
+
 - Table `public.instagram_posts` (migration `20261126000000_create_instagram_posts.sql`, same RLS as `blog_posts`):
   `code text pk`, `taken_at timestamptz`, `caption`, `permalink`, `slides jsonb`
   (`{type:'photo',src,width,height}` | `{type:'video',src:null}`; a photo slide that could not be archived is
