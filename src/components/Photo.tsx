@@ -1,4 +1,7 @@
 import { useLayoutEffect, useRef, useState } from "react";
+import { hasSmPreview, photoSrc, photoUrl } from "../lib/photos";
+
+export { photoSrc, photoUrl, preloadPhoto } from "../lib/photos";
 
 interface Props {
   src: string;
@@ -11,48 +14,70 @@ interface Props {
   priority?: boolean;
 }
 
-/** Use a resized WebP when present, and keep the original file as the fallback. */
-export function photoSrc(src: string, size: "sm" | "full" = "full"): string {
-  const m = src.match(/^(\/photos\/(?:\d+|ig\/[A-Za-z0-9_-]+)\/\d+)\.(jpe?g|png|webp)$/i);
-  if (!m) return src;
-  return size === "sm" ? `${m[1]}-sm.webp` : `${m[1]}.webp`;
-}
-
 type LoadState = "loading" | "in" | "done";
 
 /**
- * While loading, the <img> box (sized by width/height, so nothing jumps) shows a shimmer, or for
- * full-size photos the small -sm.webp (usually already cached from a card) as a blurred preview.
- * Once decoded it fades in from a light blur. Cached images skip the animation.
+ * While a full-size photo loads, the already-cached -sm.webp (or a light placeholder) sits
+ * underneath; the full image then fades in. Cached images skip the animation.
  */
 function PhotoImg({ src, alt, width, height, size = "full", priority }: Props) {
+  const fallback = photoUrl(src);
   const webp = photoSrc(src, size);
-  const preview = size === "full" && webp !== src ? photoSrc(src, "sm") : null;
+  const preview = size === "full" && hasSmPreview(src) ? photoSrc(src, "sm") : null;
   const ref = useRef<HTMLImageElement>(null);
   const [state, setState] = useState<LoadState>("loading");
+  const [previewFailed, setPreviewFailed] = useState(false);
   useLayoutEffect(() => {
     const img = ref.current;
     if (img && img.complete && img.naturalWidth > 0) setState("done");
   }, []);
-  const cls = state === "loading" ? (preview ? "ph ph-preview" : "ph ph-shimmer") : state === "in" ? "ph-in" : undefined;
-  return (
+
+  const cls = state === "loading" ? (preview && !previewFailed ? undefined : "ph ph-shimmer") : state === "in" ? "ph-in" : undefined;
+
+  const imgEl = (
     <picture>
-      {webp !== src && <source type="image/webp" srcSet={webp} />}
+      {webp !== fallback && <source type="image/webp" srcSet={webp} />}
       <img
         ref={ref}
-        className={cls}
-        style={state === "loading" && preview ? { backgroundImage: `url("${preview}")` } : undefined}
-        src={src}
+        className={["ph-full", cls].filter(Boolean).join(" ") || undefined}
+        src={fallback}
         alt={alt}
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : "auto"}
         decoding="async"
         width={width}
         height={height}
-        onLoad={() => setState((s) => (s === "loading" ? "in" : s))}
+        onLoad={() => {
+          const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          setState((s) => (s === "loading" ? (reduce ? "done" : "in") : s));
+        }}
         onError={() => setState("done")}
+        onAnimationEnd={() => setState("done")}
       />
     </picture>
+  );
+
+  if (size !== "full") return imgEl;
+
+  const showPreview = preview && !previewFailed && state !== "done";
+  const showPlaceholder = (!preview || previewFailed) && state === "loading";
+
+  return (
+    <span className="ph-frame">
+      {showPreview && (
+        <img
+          className="ph-thumb"
+          src={preview}
+          alt=""
+          aria-hidden="true"
+          width={width}
+          height={height}
+          onError={() => setPreviewFailed(true)}
+        />
+      )}
+      {showPlaceholder && <span className="ph-placeholder" />}
+      {imgEl}
+    </span>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import Photo from "./Photo";
+import Photo, { preloadPhoto } from "./Photo";
 import { useDialogFocus } from "../lib/modalFocus";
 import type { PhotoBlock } from "../types";
 
@@ -83,6 +83,12 @@ export default function Lightbox({ photos, index, onIndex, action, link }: Props
     };
   }, [open]);
 
+  useEffect(() => {
+    if (index === null) return;
+    if (index > 0) preloadPhoto(photos[index - 1].src, "full");
+    if (index < photos.length - 1) preloadPhoto(photos[index + 1].src, "full");
+  }, [index, photos]);
+
   const p = open ? photos[index!] : null;
   return (
     <dialog
@@ -94,7 +100,7 @@ export default function Lightbox({ photos, index, onIndex, action, link }: Props
     >
       {p && (
         <>
-          <Photo src={p.src} alt={p.alt ?? ""} width={p.width ?? undefined} height={p.height ?? undefined} size="full" />
+          <Photo src={p.src} alt={p.alt ?? ""} width={p.width ?? undefined} height={p.height ?? undefined} size="full" priority />
           <div className="lb-bar">
             <button type="button" className="lb-btn" onClick={() => onIndex(index! - 1)} disabled={index === 0} aria-label="上一張">
               ‹

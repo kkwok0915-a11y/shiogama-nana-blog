@@ -4,7 +4,7 @@ import type { IgPost } from "../lib/instagram";
 import { igDay } from "../lib/feed";
 import type { PhotoBlock, Post } from "../types";
 import Lightbox from "./Lightbox";
-import Photo from "./Photo";
+import Photo, { preloadPhoto } from "./Photo";
 
 import type { Source } from "./SourceFilter";
 
@@ -83,7 +83,7 @@ export default function PhotoGallery({ items, source, onOpenPost, onOpenIg }: Pr
               const idx = items.indexOf(it);
               return (
                 <li key={it.key}>
-                  <button type="button" className="gallery-btn" onClick={() => setLb(idx)} aria-label={it.label}>
+                  <button type="button" className="gallery-btn" onClick={() => setLb(idx)} onMouseEnter={() => preloadPhoto(it.photo.src, "full")} onTouchStart={() => preloadPhoto(it.photo.src, "full")} aria-label={it.label}>
                     <Photo
                       src={it.photo.src}
                       alt={it.photo.alt ?? ""}

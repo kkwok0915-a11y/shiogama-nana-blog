@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import type { IgPost } from "../lib/instagram";
 import type { PhotoBlock } from "../types";
 import Lightbox from "./Lightbox";
-import Photo from "./Photo";
+import Photo, { preloadPhoto } from "./Photo";
 
 const URL_RE = /(https?:\/\/[^\s<>）)\]」]+)/g;
 
@@ -93,7 +93,7 @@ export default function InstagramView({ post, prev, next, onBack, onOpen }: Prop
             const idx = photoIdx;
             return (
               <div className="ig-slide" key={i} aria-roledescription="slide" aria-label={`${i + 1} / ${count}`}>
-                <button type="button" className="photo-btn" onClick={() => setLb(idx)} aria-label="放大照片">
+                <button type="button" className="photo-btn" onClick={() => setLb(idx)} onMouseEnter={() => preloadPhoto(s.src, "full")} onTouchStart={() => preloadPhoto(s.src, "full")} aria-label="放大照片">
                   <Photo src={s.src} alt={photos[idx].alt ?? ""} width={s.width ?? undefined} height={s.height ?? undefined} size="full" priority={i === 0} />
                 </button>
               </div>

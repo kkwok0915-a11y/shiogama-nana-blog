@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { postShareUrl } from "../lib/posts";
 import type { Post } from "../types";
 import Lightbox from "./Lightbox";
-import Photo from "./Photo";
+import Photo, { preloadPhoto } from "./Photo";
 
 const URL_RE = /(https?:\/\/[^\s<>）)\]」]+)/g;
 
@@ -137,7 +137,7 @@ export default function PostView({ post, prev, next, onBack, onOpen }: Props) {
           const idx = photoIdx;
           return (
             <figure className="photo" key={i}>
-              <button type="button" className="photo-btn" onClick={() => setLb(idx)} aria-label={`放大 ${b.alt ?? "照片"}`}>
+              <button type="button" className="photo-btn" onClick={() => setLb(idx)} onMouseEnter={() => preloadPhoto(b.src, "full")} onTouchStart={() => preloadPhoto(b.src, "full")} aria-label={`放大 ${b.alt ?? "照片"}`}>
                 <Photo
                   src={b.src}
                   alt={b.alt ?? ""}
